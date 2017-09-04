@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from statsmodels.stats.weightstats import ttest_ind
 
 
 def read_csv(file, control_samples):
@@ -18,12 +19,13 @@ def read_csv(file, control_samples):
 
     return control, case
 
+
 # con, case = read_csv('sample_expression.tsv', control_samples=range(3, 6))
 # print(con.loc[['MYH16']])  # row
 # print(con['Tumour_sample_1']) #column
 
 
-def fold_change(case,base, log2 = False):
+def fold_change(case, base, log2=False):
     """
 
     :param case:
@@ -32,15 +34,43 @@ def fold_change(case,base, log2 = False):
     :return:
     """
     fold_changes = case.copy()
-    for (idx,row) in base.iterrows():
-        fold_changes.loc[[idx]] /= (np.mean(row) or 0.01) # TODO for now arbitrary value 0.01 when 0's are found
+    for (idx, row) in base.iterrows():
+        fold_changes.loc[[idx]] /= (np.mean(row) or 0.01)  # TODO for now arbitrary value 0.01 when 0's are found
 
     if log2:
-        fold_changes = np.log2(fold_changes) #TODO Runtime Warning when 0's are encountered
+        fold_changes = np.log2(fold_changes)  # TODO Runtime Warning when 0's are encountered
 
     return fold_changes
+
 
 # f_cs = fold_change(case,con)
 # print(f_cs)
 # f_cs = fold_change(case,con,log2=True)
 # print(f_cs)
+
+def ttest_ind_mean(case, base_samples, alternative="two-sided"):
+    """
+    Two sided t-test of case sample(s) and mean expression values in base_samples across all genes
+    :param case: data frame with case sample(s)
+    :param base_samples: data frame with base sample(s)
+    :param alternative: string with the alternative hypothesis, H1, has to be one of the following:
+                        ‘two-sided’: H1: difference in means not equal to value (default)
+                        ‘larger’ : H1: difference in means larger than value
+                        ‘smaller’ : H1: difference in means smaller than value
+    :return:
+            tstat : float or numpy array in case of multiple case samples - test statisic
+            pvalue : float or numpy array in case of multiple case samples - pvalue of the t-test
+            df : int or float - degrees of freedom used in the t-test
+    """
+    l = []
+    for (idx, row) in base_samples.iterrows():
+        l.append(np.mean(row))
+
+    return ttest_ind(l, case, alternative)
+
+# tt1 = ttest_ind_mean(case['Tumour_sample_1'], con)
+# tt2 = ttest_ind_mean(case['Tumour_sample_2'], con)
+# tt = ttest_ind_mean(case, con)
+# print(tt1)
+# print(tt2)
+# print(tt)
