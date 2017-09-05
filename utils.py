@@ -3,19 +3,19 @@ import numpy as np
 from statsmodels.stats.weightstats import ttest_ind
 
 
-def read_csv(file, control_samples):
+def read_tsv_data(file_name, control_samples):
     """
-    :param file: file containing gene expression of the following structure:
+    :param file_name: file containing gene expression of the following structure:
         - names of samples separated by tab in first row
         - gene symbol/name followed by gene expression values for every sample in remaining rows
     :param control_samples: list of control_samples indexes (1 - based)
     :return: data frames for two sets of samples
     """
-    with open(file, 'r') as f:
+    with open(file_name, 'r') as f:
         case_samples = [x for x in range(len(f.readline().split('\t')[1:])) if x not in control_samples]
 
-    control = pd.read_csv(file, delimiter='\t', header=0, index_col=0, usecols=[0] + list(control_samples))
-    case = pd.read_csv(file, delimiter='\t', header=0, index_col=0, usecols=case_samples)
+    control = pd.read_csv(file_name, delimiter='\t', header=0, index_col=0, usecols=[0] + list(control_samples))
+    case = pd.read_csv(file_name, delimiter='\t', header=0, index_col=0, usecols=case_samples)
 
     return control, case
 
@@ -62,15 +62,6 @@ def ttest_ind_mean(case, base_samples, alternative="two-sided"):
             pvalue : float or numpy array in case of multiple case samples - pvalue of the t-test
             df : int or float - degrees of freedom used in the t-test
     """
-    l = []
-    for (idx, row) in base_samples.iterrows():
-        l.append(np.mean(row))
+    l = [np.mean(row) for (idx, row) in base_samples.iterrows()]
 
-    return ttest_ind(l, case, alternative)
-
-# tt1 = ttest_ind_mean(case['Tumour_sample_1'], con)
-# tt2 = ttest_ind_mean(case['Tumour_sample_2'], con)
-# tt = ttest_ind_mean(case, con)
-# print(tt1)
-# print(tt2)
-# print(tt)
+    return ttest_ind(case, l, alternative)
