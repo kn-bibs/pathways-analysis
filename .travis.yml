@@ -8,7 +8,8 @@ python:
 
 install:
   - pip install -r requirements.txt
+  - pip install -r tests/requirements.txt
 
 
 script:
- - python3 -m unittest -v
+ - bash run_tests.sh

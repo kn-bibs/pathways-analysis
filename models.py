@@ -17,14 +17,20 @@ class Gene:
 
 # TODO description about what is data?
 class Sample:
-
-    def __init__(self, name, data):
-        self.name = name
         self.data = data
+        self.name = name
 
     @classmethod
     def from_names(cls, name, data):
         return cls(name, {Gene(_name) : value for _name, value in data.items()})
+
+    def as_array(self):
+        """
+
+        Returns: one-dimensional labeled array with Gene objects as labels
+
+        """
+        return pd.Series(self.data)
 
 
 # TODO class variable with set of genes + method(s) for checking data integrity
@@ -35,11 +41,11 @@ class Phenotype:
 
     def as_array(self):
         """
-        For example as data_frame
-        The idea is that it should be an object which can ba passed to ttest_ind
-        :return:
+
+        Returns: pandas DataFrame object for all samples, which can be passed to ttest_ind
+
         """
-        pass
+        return {s.name: pd.DataFrame(s) for s in self.samples}
 
     def __add__(self, other):
         return self.samples + other.samples
