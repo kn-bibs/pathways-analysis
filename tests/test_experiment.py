@@ -3,7 +3,7 @@ import unittest
 import pandas as pd
 import numpy as np
 
-from utils import read_tsv_data, fold_change
+from models import read_tsv_data, fold_change
 
 
 class Test_utils(unittest.TestCase):
