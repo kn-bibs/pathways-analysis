@@ -1,39 +1,39 @@
-import unittest
+import pytest
 
-import pandas as pd
-import numpy as np
+from models import Experiment, Phenotype, Sample
 
-from models import read_tsv_data, fold_change
-
-
-class Test_utils(unittest.TestCase):
-    def test_read_csv(self):
-        with self.assertRaises(TypeError):
-            read_tsv_data()
-        with self.assertRaises(TypeError):
-            read_tsv_data('sample_expression.tsv')
-        con, case = read_tsv_data('sample_expression.tsv', [3, 4, 5])
-        self.assertIsInstance(con, pd.DataFrame)
-        self.assertIsInstance(case, pd.DataFrame)
-        self.assertAlmostEqual(con['Normal_sample_1'].loc[['BAD']].values[0], 301.126, places=3)
-        self.assertAlmostEqual(case['Tumour_sample_1'].loc[['BAD']].values[0], 368.033, places=3)
-
-    def test_fold_change(self):
-        with self.assertRaises(TypeError):
-            fold_change()
-        con, case = read_tsv_data('sample_expression.tsv', [3, 4, 5])
-        with self.assertRaises(TypeError):
-            fold_change(case)
-        f_cs = fold_change(case, con)
-        self.assertIsInstance(f_cs, pd.DataFrame)
-        t = f_cs['Tumour_sample_1'].loc[['BAD']].values[0]
-        self.assertAlmostEqual(t, 1.126, places=3)
-        f_cs = fold_change(case, con, log2=True)
-        t2 = f_cs['Tumour_sample_1'].loc[['BAD']].values[0]
-        self.assertAlmostEqual(t2, np.log2(t))
-        print(f_cs)
+# TODO methods for creating samples and phenotypes
 
 
-if __name__ == "__main__":
-    runner = unittest.TextTestRunner(verbosity=2)
-    unittest.main(testRunner=runner)
+def test_experiment_init():
+    data1 = {'BAD': 1.2345, 'FUCA2': 6.5432}
+    data2 = {'BAD': 2.3456, 'FUCA2': 7.6543}
+    data3 = {'BAD': 3.4567}
+
+    tumour_samples = [Sample.from_names('Tumour_1', data1), Sample.from_names('Tumour_2',data2)]
+    normal_samples = [Sample.from_names('Normal_1',data3)]
+
+    tumour = Phenotype('Tumour', tumour_samples)
+    normal = Phenotype('Normal', normal_samples)
+
+    experiment = Experiment(case=tumour, control = normal)
+
+    assert isinstance(experiment.case, Phenotype)
+    assert isinstance(experiment.control, Phenotype)
+
+    assert experiment.case == tumour
+    assert experiment.control == normal
+
+def test_experiment_from_tsv():
+    pass
+
+def test_experiment_from_gsea_file():
+    pass
+
+def test_experiment_get_all():
+    pass
+
+def test_experiment_fold_change():
+    pass
+
+
