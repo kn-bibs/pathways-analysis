@@ -9,9 +9,9 @@ class Gene:
 
 
 class Sample:
-
-    def __init__(self, data):
+    def __init__(self, name, data):
         self.data = data
+        self.name = name
 
     @classmethod
     def from_names(cls, data):
@@ -19,6 +19,14 @@ class Sample:
             Gene(name=name): value
             for name, value in data.items()
         })
+
+    def as_array(self):
+        """
+
+        Returns: one-dimensional labeled array with Gene objects as labels
+
+        """
+        return pd.Series(self.data)
 
 
 class Phenotype:
@@ -28,11 +36,11 @@ class Phenotype:
 
     def as_array(self):
         """
-        For example as data_frame
-        The idea is that it should be an object which can ba passed to ttest_ind
-        :return:
+
+        Returns: pandas DataFrame object for all samples, which can be passed to ttest_ind
+
         """
-        pass
+        return {s.name: pd.DataFrame(s) for s in self.samples}
 
     def __add__(self, other):
         return self.samples + other.samples
