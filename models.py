@@ -4,25 +4,32 @@ import pandas as pd
 
 class Gene:
 
+    instances = {}
+
+    def __new__(cls, name, *args, **kwargs):
+        if name not in cls.instances:
+            cls.instances[name] = super(Gene, cls).__new__(cls, *args, **kwargs)
+        return cls.instances[name]
+
     def __init__(self, name):
         self.name = name
 
 
+# TODO description about what is data?
 class Sample:
 
-    def __init__(self, data):
+    def __init__(self, name, data):
+        self.name = name
         self.data = data
 
     @classmethod
-    def from_names(cls, data):
-        return cls({
-            Gene(name=name): value
-            for name, value in data.items()
-        })
+    def from_names(cls, name, data):
+        return cls(name, {Gene(_name) : value for _name, value in data.items()})
 
 
+# TODO class variable with set of genes + method(s) for checking data integrity
 class Phenotype:
-    def __init__(self, name='', samples=None):
+    def __init__(self, name, samples=None):
         self.samples = samples or []
         self.name = name
 
@@ -37,7 +44,8 @@ class Phenotype:
     def __add__(self, other):
         return self.samples + other.samples
 
-
+# TODO class variable with set of genes + method(s) for checking data integrity
+# TODO unify file reading with argument_parser
 class Experiment:
 
     def __init__(self, case: Phenotype, control: Phenotype):
