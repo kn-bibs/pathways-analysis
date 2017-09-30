@@ -1,3 +1,6 @@
+from typing import Callable, Mapping, Sequence
+from warnings import warn
+
 import numpy as np
 import pandas as pd
 
@@ -15,14 +18,36 @@ class Gene:
         self.name = name
 
 
-# TODO description about what is data?
 class Sample:
-        self.data = data
+
+    def __init__(self, name, data: Mapping[Gene, float]):
         self.name = name
+        self.data = data
 
     @classmethod
-    def from_names(cls, name, data):
-        return cls(name, {Gene(_name) : value for _name, value in data.items()})
+    def from_names(cls, name, data: Mapping[str, float]):
+        """Create a sample from a gene_name: value mapping.
+
+        Args:
+            name: name of sample
+            data: mapping (e.g. dict) where keys represent gene names
+        """
+        return cls(name, {Gene(gene_name): value for gene_name, value in data.items()})
+
+    @classmethod
+    def from_array(cls, name, panda_series: pd.Series):
+        """Create a sample from pd.Series or equivalent.
+
+        Side effects:
+            `panda_series` will be renamed and a reference to
+            it will be stored in the new `Sample` object.
+
+        Args:
+            name: name of sample
+            panda_series: series object where columns represent gene names
+        """
+        panda_series.rename(lambda gene_name: Gene(gene_name))
+        return cls(name, panda_series)
 
     def as_array(self):
         """
@@ -33,8 +58,34 @@ class Sample:
         return pd.Series(self.data)
 
 
+def first_line(file_object):
+    line = None
+
+    while not line:
+        line = file_object.readline()
+
+    # return to the beginning
+    file_object.seek(0)
+
+    return line
+
+
 # TODO class variable with set of genes + method(s) for checking data integrity
 class Phenotype:
+    """Phenotype is a collection of samples of common origin or characteristic.
+
+    An example phenotype can be:
+        (Breast_cancer_sample_1, Breast_cancer_sample_2) named "Breast cancer".
+
+        The common origin/characteristics for "Breast cancer" phenotype could be
+        "a breast tumour", though samples had been collected from two donors.
+
+    Another example are controls:
+        (Control_sample_1, Control_sample_2) named "Control".
+
+        The common characteristic for these samples is that both are controls.
+    """
+
     def __init__(self, name, samples=None):
         self.samples = samples or []
         self.name = name
@@ -48,7 +99,101 @@ class Phenotype:
         return {s.name: pd.DataFrame(s) for s in self.samples}
 
     def __add__(self, other):
-        return self.samples + other.samples
+        return Phenotype(self.name, self.samples + other.samples)
+
+    @classmethod
+    def from_file(
+            cls, name, file_object, columns_selector: Callable[[Sequence[int]], Sequence[int]]=None,
+            samples=None, delimiter: str='\t', index_col: int=0, use_header=True
+    ):
+        """Create a phenotype (collection of samples) from csv/tsv file.
+
+        Args:
+            name:
+                a name of the phenotype (or group of samples) which will
+                identify it (like "Tumour_1" or "Control_in_20_degrees")
+
+            file_object: a file containing gene expression of the following structure:
+                - names of samples separated by tab in first row
+                - gene symbol/name followed by gene expression values for every sample in remaining rows
+
+            columns_selector:
+                a function which will select (and return) a subset of
+                provided column identifiers (do not use with `samples`)
+
+            samples:
+                a list of names of samples to extract from file
+                (do not use with `columns_selector`)
+
+            delimiter: the delimiter of the columns
+            index_col: column to use as the gene names
+            use_header: does the file has header?
+        """
+        #raise Exception()
+        if file_object.tell() != 0:
+            warn('Passed file object was read before.')
+            print(file_object)
+            #raise Exception()
+
+        line = first_line(file_object)
+
+        if columns_selector:
+            # sniff how many columns do we have in the file
+            columns_count = line.count(delimiter)
+
+            # generate identifiers (numbers) for all columns
+            # and take the requested subset
+            columns = columns_selector(range(columns_count))
+        else:
+            columns = None
+
+        # we could leave it to pandas, but it shows an ugly,
+        # not very helpful message. It is better to show the
+        # user where exactly the problem occurs.
+        if samples and use_header:
+            available_samples = [
+                name.strip()
+                for name in line.split('\t')[index_col + 1:]
+            ]
+
+            lacking_samples = set(samples) - set(available_samples)
+
+            if lacking_samples:
+                raise ValueError(
+                    f'Samples {lacking_samples} are not available in {file_object.name} file.\n'
+                    f'Following samples were found: {", ".join(available_samples)}.'
+                )
+
+        # just to reassure that the pointer is on the beginning
+        if file_object.tell() != 0:
+            warn('Passed file object was read before.')
+
+        if samples and columns:
+            warn(
+                'Please, provide either columns or samples, '
+                'not both. We will use columns this time.'
+            )
+
+        data = pd.read_csv(
+            file_object, delimiter=delimiter,
+            header=0 if use_header else None,  # None - do not use, 0 - use first row
+            index_col=index_col, usecols=columns or samples
+        )
+
+        samples = [
+            Sample.from_array(sample_name, sample_data)
+            for sample_name, sample_data in data.iteritems()
+        ]
+
+        return cls(name, samples)
+
+    @classmethod
+    def from_gsea_file(cls):
+        """Stub: if we need to handle very specific files,
+        for various analysis methods, we can extend Phenotype
+        with class methods like from_gsea_file."""
+        pass
+
 
 # TODO class variable with set of genes + method(s) for checking data integrity
 # TODO unify file reading with argument_parser
@@ -60,37 +205,6 @@ class Experiment:
 
     def get_all(self):
         return self.control + self.case
-
-    @classmethod
-    def from_tsv(cls, file_name):
-        # TODO
-        control = Phenotype(name='Some Hardcore Tumor', samples=[Sample()])
-        case = Phenotype(name='reference', samples=[Sample()])
-        return cls(control, case)
-        """
-        def read_tsv_data(file_name, control_samples):
-            ""
-            Args:
-                # TODO
-                file_name: file containing gene expression of the following structure:
-                - names of samples separated by tab in first row
-                - gene symbol/name followed by gene expression values for every sample in remaining rows
-                control_samples: list of control_samples indexes (1 - based)
-            Returns:
-                data frames for two sets of samples
-        ""
-        with open(file_name, 'r') as f:
-            case_samples = [x for x in range(len(f.readline().split('\t')[1:])) if x not in control_samples]
-
-        control = pd.read_csv(file_name, delimiter='\t', header=0, index_col=0, usecols=[0] + list(control_samples))
-        case = pd.read_csv(file_name, delimiter='\t', header=0, index_col=0, usecols=case_samples)
-
-        return control, case
-        """
-
-    @classmethod
-    def from_gsea_file(cls):
-        pass
 
     # TODO: are there many ways to compute fold-change?
     def get_fold_change(self, sample_from_case, use_log=False):
@@ -111,7 +225,7 @@ class Experiment:
 
 
 class Study:
-    def __init__(self, cases: ArrayType, control: Phenotype):
+    def __init__(self, cases: Sequence[Phenotype], control: Phenotype):
         for case in cases:
             self.experiments = Experiment(case, control)
 

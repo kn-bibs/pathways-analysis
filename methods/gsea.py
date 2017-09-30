@@ -1,4 +1,4 @@
-from .methods import Method
+from .method import Method
 
 
 class GSEA(Method):
