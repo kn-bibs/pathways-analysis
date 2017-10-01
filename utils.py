@@ -7,10 +7,13 @@ class AbstractRegisteringType(ABCMeta):
         super().__init__(name, bases, attributes)
 
         if not hasattr(cls, 'members'):
-            cls.members = set()
+            cls.members = {}
 
-        cls.members.add(cls)
-        cls.members -= set(bases)
+        if hasattr(cls, 'name'):
+            cls.members[cls.name] = cls
+            for base in bases:
+                if hasattr(base, 'name') and base.name in cls.members:
+                    del cls.members[base.name]
 
 
 def abstract_property(method):

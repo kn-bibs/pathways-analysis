@@ -129,11 +129,10 @@ class Phenotype:
             index_col: column to use as the gene names
             use_header: does the file has header?
         """
-        #raise Exception()
         if file_object.tell() != 0:
             warn('Passed file object was read before.')
             print(file_object)
-            #raise Exception()
+            raise Exception()
 
         line = first_line(file_object)
 

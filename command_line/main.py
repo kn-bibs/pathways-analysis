@@ -1,18 +1,10 @@
 import argparse
 
+from command_line.method_parser import MethodParser
 from methods import Method
 from models import Phenotype, Experiment
-
-from .types import Slice, one_of, Indices
 from .parser import Parser, Argument
-
-
-class MethodParser(Parser):
-
-    def __init__(self, method, **kwargs):
-        # TODO: add arguments from method to dir(self) and use dir insetead fo var in Parser.init
-        super().__init__(**kwargs)
-        self.method = method
+from .types import Slice, one_of, Indices
 
 
 class PhenotypeFactory(Parser):
@@ -23,18 +15,19 @@ class PhenotypeFactory(Parser):
     files = Argument(type=argparse.FileType('r'), nargs='+')
 
     name = Argument(help='Your custom name for this set of samples.')
-    # TODO support multiple files:
+
     samples = Argument(
-        #action='append',
+        type=lambda x: x.split(','),
         nargs='*',
         help='Names of samples (columns) to be extracted from the file. '
              'Sample names are determined from the first non-empty row. '
+             'Use comma to separate samples. '
              'Samples for each of files should be separated by space.'
     )
 
     # we want to handle either ":4", "5:" or even "1,2,3"
     columns = Argument(
-        type=one_of(Slice, Indices),
+        type=lambda x: [one_of(Slice, Indices)(y) for y in x.split(' ')],
         # user may (but do not have to) specify columns
         # to be extracted from given file.
         nargs='*',
@@ -57,8 +50,8 @@ class PhenotypeFactory(Parser):
                     Phenotype.from_file(
                         f'Sample collection, part {i} of {name}',
                         file_obj,
-                        columns_selector=opts.columns.get_iterator if opts.columns else None,
-                        samples=opts.samples
+                        columns_selector=opts.columns[i].get_iterator if opts.columns else None,
+                        samples=opts.samples[i] if opts.samples else None
                     )
                 )
 
@@ -116,12 +109,16 @@ class CLIExperiment(Parser):
         if opts.data.files:
             if opts.control.files or opts.case.files:
                 raise ValueError('Cannot handle data and case/control at once')
-            #self.data.produce()
 
             opts.case = self.data.namespace.case
             opts.control = self.data.namespace.control
+        elif opts.case.files and opts.control.files:
+            # that's nice :)
+            pass
         else:
-            del opts.data
+            raise ValueError('Neither data nor (case & control) have been provided!')
+
+        del opts.data
 
         opts.experiment = Experiment(opts.case.phenotype, opts.control.phenotype)
 
@@ -131,38 +128,54 @@ class CLIExperiment(Parser):
 class CLI(Parser):
     """The main parser, the one exposed directly to the user."""
 
-    methods = {
-        method.name: method
-        for method in Method.members
-    }
-    method_name = Argument(choices=methods, required=True, name='method', short='m')
+    method_name = Argument(choices=Method.members, name='method', short='m', optional=False)
     experiment = CLIExperiment()
 
-    def produce(self, unknown_args):
-        options = self.namespace
-
+    @staticmethod
+    def create_method(name):
         # first - take an appropriate method class
-        method = self.methods[options.method]
+        method = Method.members[name]
 
         # initialize parser for this method
         # (different methods require different arguments)
         method_parser = MethodParser(method=method)
 
-        # parse arguments
-        method_options, unknown_args = method_parser.parse_known_args(unknown_args)
-
-        # ant initialize the method with these arguments
-        options.method = method(**vars(method_options))
-
-        return options
+        return method_parser
 
     def parse(self, args):
+        help_args = {'-h', '--help'}
 
-        if '-h' in args or '--help' in args:
-            self.parser.parse_args(args)
+        if help_args.intersection(args):
+            args_without_help = [
+                arg
+                for arg in args
+                if arg not in help_args
+            ]
 
-        options, unknown_args = self.parse_known_args(args)
-        assert not unknown_args
+            # do we have method name specified?
+            if len(args_without_help):
+                method_name = args_without_help[0]
+                method = Method.members[method_name]
+                method_parser = MethodParser(method=method)
+
+                return method_parser.parse(args_without_help[1:] + ['-h'])
+
+        return super().parse(args)
+
+    def produce(self, unknown_args):
+        options = self.namespace
+
+        method_parser = self.create_method(options.method)
+
+        # parse arguments
+        method_options, remaining_unknown_args = method_parser.parse_known_args(unknown_args)
+
+        for argument in unknown_args[:]:
+            if argument not in remaining_unknown_args:
+                unknown_args.remove(argument)
+
+        # ant initialize the method with these arguments
+        options.method = method_parser.method(**vars(method_options))
 
         return options
 

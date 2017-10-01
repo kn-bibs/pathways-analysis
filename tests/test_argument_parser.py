@@ -1,10 +1,12 @@
+from argparse import Namespace
+from contextlib import contextmanager
+
 import pytest
 
+from command_line.parser import Argument
 from methods import Method
 from command_line import CLI
-
-
-# Here I assume that all the files are in TSV format (for now, we may want to change this in the future)
+from patapy import run
 
 
 def parse(command_line):
@@ -17,11 +19,9 @@ def parse(command_line):
     return CLI().parse(commands)
 
 
-def test_files_loading(tmpdir):
-    # method is obligatory, each parser execution will
-    # be prefixed with this method selection command
-
-    prefix = '--method gsea '
+@pytest.fixture
+def test_files(tmpdir):
+    # Here I assume that all the files are in TSV format (for now, we may want to change this in the future)
 
     # create temporary files
     files = {
@@ -48,17 +48,23 @@ def test_files_loading(tmpdir):
         )
     }
 
-    p = {}
+    tmpdir.chdir()
 
     for filename, lines in files.items():
         file_object = tmpdir.join(filename)
-        p[filename] = str(file_object)
         file_object.write('\n'.join(lines))
 
+
+def test_files_loading(test_files):
+    # method is obligatory, each parser execution will
+    # be prefixed with this method selection command
+
+    prefix = 'gsea '
+
     accepted_commands = [
-        f'case --files {p["t.tsv"]} control --files {p["c.tsv"]}',
-        f'case --files {p["t.tsv"]} --samples Tumour_1 control --files {p["c.tsv"]} --samples Control_1',
-        f'case --files {p["t.tsv"]} --samples Tumour_1 control --files {p["c.tsv"]} --samples Control_1 Control_2',
+        'case --files t.tsv control --files c.tsv',
+        'case --files t.tsv --samples Tumour_1 control --files c.tsv --samples Control_1',
+        'case --files t.tsv --samples Tumour_1 control --files c.tsv --samples Control_1,Control_2',
         #f'data --files {p["merged.tsv"]} --case 1 --control 2'
     ]
 
@@ -107,37 +113,114 @@ class Success(Exception):
     pass
 
 
-def test_methods(capsys):
-    # TODO: needs implementation
-    help_command = '--methods -h'
-    methods_help = parse(help_command)
+@contextmanager
+def parsing_output(capsys, contains=None, does_not_contain=None):
+    text = Namespace()
+    capsys.readouterr()     # clean buffers
+    with pytest.raises(SystemExit):
+        yield text
+    text.std, text.err = capsys.readouterr()
+    if contains:
+        assert contains in text.std
+    if does_not_contain:
+        assert does_not_contain not in text.std
+
+
+def test_help(capsys):
+
+    with parsing_output(capsys) as text:
+        parse('--help')
 
     for method in Method.members:
-        assert method.name in methods_help
+        assert method in text.std
+
+
+def test_methods(capsys, test_files):
+    suffix = 'case --files t.tsv control --files c.tsv'
 
     class MyMethod(Method):
 
         name = 'some_method'
         help = 'Some important text help'
 
-        def __init__(self, my_argument=None):
-            super().__init__()
-            if my_argument == 'value':
+        other_argument = Argument(
+            type=int,
+            help='Only integer numbers!',
+            default=0,
+        )
+
+        def __init__(self, mode, my_argument: float=None, other_argument=None):
+            """
+
+            Args:
+                mode: This argument has to be passed!
+                my_argument: Help and documentation for my_argument
+                other_argument: Documentation for the other_argument
+            """
+
+            if mode == 'active':
+                raise Success('In active mode!')
+            if my_argument == 1.4:
                 raise Success('Correct Argument provided +1')
+            if type(other_argument) is int:
+                raise Success(f'Parsed +{other_argument}')
 
         def run(self, experiment):
             raise Success('Run +10')
 
-    # test Argument
-    with pytest.raises(Success):
-        parse('--method some_method --my_argument value')
+    # test mode which is a required argument
+    with pytest.raises(Success, message='In active mode!'):
+        parse(f'some_method active {suffix}')
 
-    # test Argument
-    with pytest.raises(Success):
-        parse('--method some_method --my_argument value')
+    # test my_argument
+    with pytest.raises(Success, message='Correct Argument provided +1'):
+        parse(f'some_method a --my_argument 1.4 {suffix}')
+
+    # test run
+    with pytest.raises(Success, message='Run +10'):
+        run(f'run.py some_method a --my_argument 2.1 {suffix}'.split())
+
+    # test other_argument
+    with pytest.raises(Success, message='Parsed +5'):
+        parse(f'some_method a --other_argument 5 {suffix}')
 
     # test help
-    parse('--method some_method --help')
-    out, _ = capsys.readouterr()
+    for test_command in ['some_method --help', '-h some_method']:
+        with parsing_output(capsys, contains='Some important text help'):
+            parse(test_command)
 
-    assert 'Some important text help' in out
+    with parsing_output(capsys, does_not_contain='Some important text help'):
+        parse('--help')
+
+
+def test_analyze_docstring():
+
+    docstring = """Some docstring.
+    
+    Arguments:
+        my_arg: is an important argument
+        active: should some feature be active
+                or maybe it should be not?
+        spread:
+            should be big or small?
+            how big or how small?
+            
+    Example:
+        examples should not be interpreted as an argument
+    
+    Returns:
+        results
+    """
+    from command_line.method_parser import analyze_docstring
+    args = analyze_docstring(docstring)
+
+    expected_args = {
+        'my_arg': 'is an important argument',
+        'active': 'should some feature be active or maybe it should be not?',
+        'spread': 'should be big or small? how big or how small?'
+    }
+
+    for name, value in expected_args.items():
+        assert args[name] == value
+
+    assert 'Example' not in args

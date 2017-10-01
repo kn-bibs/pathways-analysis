@@ -1,1 +1,1 @@
-python3 -m pytest -x -vv
+python3.6 -m pytest -x -vv --tb=long

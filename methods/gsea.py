@@ -13,5 +13,8 @@ class GSEA(Method):
         - Mootha, Lindgren, et al. (2003, Nat Genet 34, 267-273)
     """
 
+    def __init__(self):
+        pass
+
     def run(self, experiment):
         pass
