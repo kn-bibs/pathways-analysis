@@ -105,7 +105,9 @@ def test_columns_purpose_deduction(test_files):
     # all the other columns (id >= 2) are cases
     commands = [
         'data merged.tsv --control :2',
-        'data merged.tsv --control 0,1'
+        'data merged.tsv --control 0,1',
+        'data merged.tsv --case 2:',
+        'data merged.tsv --case 2,3'
     ]
     expected_cases = {
         'Tumour_1': {'TP53': 7, 'BRCA2': 7},
@@ -127,11 +129,6 @@ def test_columns_purpose_deduction(test_files):
 def TODO():
     """
     cases = {
-        # command => expected Namespace resulting from given command
-        'data merged.tsv --case :4': '',
-        'data merged.tsv --control :3': '',
-        'data merged.tsv --control 1,3' # all other are cases: '',
-        
         # we want to ignore column number three altogether
         'data merged.tsv --case 1,2,4 --control 5-8': '',
         'data merged.tsv --case 1,2,4 --control 5:8': '',

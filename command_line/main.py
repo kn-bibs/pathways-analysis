@@ -75,7 +75,21 @@ class PhenotypeFactory(Parser):
 
 
 class SingleFileExperimentFactory(Parser):
-    """Provide both case and control samples within a single file."""
+    """Provide both: case and control samples from a single file.
+
+    This is just a shortcut for specifying the same file for both:
+    case and control samples sets. You have to provide --case or
+    --control (or both) to specify which columns contain controls.
+
+    If you specify only one of --case and --control, it will be
+    assumed that all other columns should be used for the other
+    set of samples (if you use `--case 0,1,2` and your file has
+    five columns with samples, then columns three and four will
+    be used to create control samples.
+
+    To enable more advanced features, please use `control`&`case`
+    options (instead of the currently selected `data` sub-parser).
+    """
 
     # exactly one file is required
     files = Argument(

@@ -161,6 +161,7 @@ class Phenotype:
             columns = columns_selector(all_columns)
 
             if reverse_selection:
+                columns = list(columns)
                 columns = [c for c in all_columns if c not in columns]
 
             # https://github.com/pandas-dev/pandas/issues/9098#issuecomment-333677100
