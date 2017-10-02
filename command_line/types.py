@@ -94,3 +94,12 @@ def one_of(*types):
 
     return one_of_types
 
+
+def dsv(value_type, delimiter=','):
+    """Delimiter Separated Values"""
+    def closure(value):
+        return [
+            value_type(y)
+            for y in value.split(delimiter)
+        ]
+    return closure

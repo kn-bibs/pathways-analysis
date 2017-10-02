@@ -1,10 +1,11 @@
 import argparse
 
-from command_line.method_parser import MethodParser
 from methods import Method
 from models import Phenotype, Experiment
+
 from .parser import Parser, Argument
-from .types import Slice, one_of, Indices
+from .types import Slice, one_of, Indices, dsv
+from .method_parser import MethodParser
 
 
 class PhenotypeFactory(Parser):
@@ -17,7 +18,7 @@ class PhenotypeFactory(Parser):
     name = Argument(help='Your custom name for this set of samples.')
 
     samples = Argument(
-        type=lambda x: x.split(','),
+        type=dsv(str),
         nargs='*',
         help='Names of samples (columns) to be extracted from the file. '
              'Sample names are determined from the first non-empty row. '
@@ -27,7 +28,7 @@ class PhenotypeFactory(Parser):
 
     # we want to handle either ":4", "5:" or even "1,2,3"
     columns = Argument(
-        type=lambda x: [one_of(Slice, Indices)(y) for y in x.split(' ')],
+        type=dsv(one_of(Slice, Indices), delimiter=' '),
         # user may (but do not have to) specify columns
         # to be extracted from given file.
         nargs='*',
@@ -65,17 +66,19 @@ class SingleFileExperimentFactory(Parser):
     # exactly one file is required
     files = Argument(
         type=argparse.FileType('r'),
-        nargs=1,
+        nargs=1,    # transforms result into a single-element list
         # required=True,
         help='file with samples for both control and cases.'
     )
     case = Argument(
         type=one_of(Slice, Indices),
+        nargs=1,
         # required=True,
         help='columns from which case samples should be extracted.'
     )
     control = Argument(
         type=one_of(Slice, Indices),
+        nargs=1,
         # required=True,
         help='columns from which control samples should be extracted.',
     )

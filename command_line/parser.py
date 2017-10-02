@@ -161,7 +161,11 @@ class Parser:
                 self.add_argument(argument, parser)
 
     def add_parser(self, parser, name):
+        # copy is needed as we do not want to share the class-method
+        # stored data across all instances
         parser = deepcopy(parser)
+        # and we want to use only this instance of the parser
+        setattr(self, name, parser)
         parser.name = name
         self.subparsers[name] = parser
         if parser.pull_to_namespace_above:

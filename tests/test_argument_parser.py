@@ -65,7 +65,7 @@ def test_files_loading(test_files):
         'case --files t.tsv control --files c.tsv',
         'case --files t.tsv --samples Tumour_1 control --files c.tsv --samples Control_1',
         'case --files t.tsv --samples Tumour_1 control --files c.tsv --samples Control_1,Control_2',
-        #f'data --files {p["merged.tsv"]} --case 1 --control 2'
+        'data --files merged.tsv --case 1 --control 2'
     ]
 
     # TODO: this is not even a blackbox but will be developed soon
