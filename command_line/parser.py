@@ -332,10 +332,13 @@ class Parser:
 
     def parse(self, args):
 
-        if '-h' in args or '--help' in args:
+        # Use the built-in help (just attach sub-parsers before).
+        if '-h' in args or '--help' in args or not args:
             self.attach_subparsers()
             self.parser.parse_args(args)
 
+        # Parse wisely, we need to support chaining sub-parsers,
+        # validation and so on. Everything in parse_known_args.
         options, unknown_args = self.parse_known_args(args)
         assert not unknown_args
 

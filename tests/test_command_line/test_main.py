@@ -70,8 +70,14 @@ def test_files_loading(test_files):
 
     # TODO: this is not even a blackbox but will be developed soon
     for command in accepted_commands:
-        print(command)
-        p_parse(command)
+        try:
+            p_parse(command)
+        except (Exception, SystemExit) as e:
+            # we need the command to find out what caused the error
+            print(command)
+            raise e
+
+    # TODO: make validation errors raise in parser context (but still easily testable!)
 
     with pytest.raises(ValueError, message='columns for 2 files provided, expected for 1'):
         # the user should use --columns 1,2 instead
@@ -79,6 +85,12 @@ def test_files_loading(test_files):
 
     with pytest.raises(ValueError, message='columns for 1 files provided, expected for 2'):
         p_parse('control c.tsv case t.tsv t_2.tsv --columns 1')
+
+    with pytest.raises(ValueError, message='Cannot handle data and case/control at once'):
+        p_parse('data merged.tsv control c.tsv')
+
+    with pytest.raises(ValueError, message='Neither data nor (case & control) have been provided!'):
+        p_parse('')
 
     """
     cases = {
@@ -121,6 +133,13 @@ def test_general_help(capsys):
 
     for method in Method.members:
         assert method in text.std
+
+    # if there are no arguments provided, the parser should
+    # show the usage summary (and do not raise any errors)
+    with parsing_output(capsys) as text:
+        parse(None)
+
+    assert 'usage' in text.err
 
 
 def test_sub_parsers_help(capsys):
