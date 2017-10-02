@@ -65,7 +65,8 @@ class PhenotypeFactory(Parser):
                         f'Sample collection, part {i} of {name}',
                         file_obj,
                         columns_selector=opts.columns[i].get_iterator if opts.columns else None,
-                        samples=opts.samples[i] if opts.samples else None
+                        samples=opts.samples[i] if opts.samples else None,
+                        reverse_selection=getattr(opts, 'reverse', False)
                     )
                 )
 
@@ -98,14 +99,40 @@ class SingleFileExperimentFactory(Parser):
 
         opts = self.namespace
 
-        if opts.files:
-            # TODO: we should enforce that either case or control (or both) is provided
+        def produce_phenotype(created_group, other_group):
+            reverse = hasattr(opts, 'reverse_' + created_group)
+            get_columns_from = created_group
+            if reverse:
+                get_columns_from = other_group
 
-            opts.control = PhenotypeFactory(name='control', files=opts.files, columns=opts.control).produce()
-            # reuse the same file
+            return PhenotypeFactory(
+                name=created_group,
+                files=opts.files,
+                columns=getattr(opts, get_columns_from),
+                reverse=reverse
+            ).produce()
+
+        if opts.files:
+            if not (opts.case and opts.control):
+                if opts.case:
+                    opts.reverse_control = True
+                elif opts.control:
+                    opts.reverse_case = True
+                else:
+                    raise ValueError(
+                        'Neither --case nor --control provided: '
+                        'please specify which columns should be used as control '
+                        'and which should be used as case.'
+                    )
+
+            phenotypes = {'control': produce_phenotype('control', 'case')}
+            # reuse the same file(s)
             for f in opts.files:
                 f.seek(0)
-            opts.case = PhenotypeFactory(name='case', files=opts.files, columns=opts.case).produce()
+            phenotypes['case'] = produce_phenotype('case', 'control')
+
+            for name, phenotype in phenotypes.items():
+                setattr(opts, name, phenotype)
 
         return opts
 

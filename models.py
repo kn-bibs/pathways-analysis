@@ -46,8 +46,8 @@ class Sample:
             name: name of sample
             panda_series: series object where columns represent gene names
         """
-        panda_series.rename(lambda gene_name: Gene(gene_name))
-        return cls(name, panda_series)
+        panda_series = panda_series.rename(lambda gene_name: Gene(gene_name))
+        return cls(name, panda_series.to_dict())
 
     def as_array(self):
         """
@@ -56,6 +56,12 @@ class Sample:
 
         """
         return pd.Series(self.data)
+
+    def __eq__(self, other):
+        return self.name == other.name and self.data == other.data
+
+    def __repr__(self):
+        return f'<Sample "{self.name}" with {len(self.data)} genes>'
 
 
 def first_line(file_object):
@@ -103,8 +109,10 @@ class Phenotype:
 
     @classmethod
     def from_file(
-            cls, name, file_object, columns_selector: Callable[[Sequence[int]], Sequence[int]]=None,
-            samples=None, delimiter: str='\t', index_col: int=0, use_header=True
+            cls, name, file_object,
+            columns_selector: Callable[[Sequence[int]], Sequence[int]]=None,
+            samples=None, delimiter: str='\t', index_col: int=0,
+            use_header=True, reverse_selection=False
     ):
         """Create a phenotype (collection of samples) from csv/tsv file.
 
@@ -125,6 +133,10 @@ class Phenotype:
                 a list of names of samples to extract from file
                 (do not use with `columns_selector`)
 
+            reverse_selection:
+                if you want to use all columns but the selected ones
+                (or all samples but the selected) set this to True
+
             delimiter: the delimiter of the columns
             index_col: column to use as the gene names
             use_header: does the file has header?
@@ -139,16 +151,42 @@ class Phenotype:
             # sniff how many columns do we have in the file
             columns_count = line.count(delimiter)
 
+            # meaningful columns start after the gene column
+            shift = index_col + 1
+
+            all_columns = list(range(shift, columns_count + shift))
+
             # generate identifiers (numbers) for all columns
             # and take the requested subset
-            columns = columns_selector(range(columns_count))
+            columns = columns_selector(all_columns)
+
+            if reverse_selection:
+                columns = [c for c in all_columns if c not in columns]
+
+            # https://github.com/pandas-dev/pandas/issues/9098#issuecomment-333677100
+            columns = [index_col] + list(columns)
         else:
             columns = None
+
+        if samples and not use_header:
+            raise ValueError(
+                'To select samples by their name, you need a file with '
+                'samples names in header. If you use such file, please set '
+                '`use_header=True`, otherwise skip `samples` in your arguments.'
+            )
 
         # we could leave it to pandas, but it shows an ugly,
         # not very helpful message. It is better to show the
         # user where exactly the problem occurs.
-        if samples and use_header:
+        if samples:
+            if index_col:
+                # TODO https://github.com/pandas-dev/pandas/issues/9098
+                warn(
+                    'Using "samples" with "index_col" != 0 may cause'
+                    ' an unexpected behaviour due to an upstream issue'
+                    'in pandas package (pandas-dev/pandas/issues/9098)'
+                )
+
             available_samples = [
                 name.strip()
                 for name in line.split('\t')[index_col + 1:]
@@ -172,15 +210,19 @@ class Phenotype:
                 'not both. We will use columns this time.'
             )
 
-        data = pd.read_csv(
-            file_object, delimiter=delimiter,
-            header=0 if use_header else None,  # None - do not use, 0 - use first row
-            index_col=index_col, usecols=columns or samples
+        data = pd.read_table(
+            file_object,
+            delimiter=delimiter,
+            # None - do not use, 0 - use first row
+            header=0 if use_header else None,
+            index_col=index_col,
+            usecols=columns or samples,
+            # prefix=f'{name}_' TODO
         )
 
         samples = [
             Sample.from_array(sample_name, sample_data)
-            for sample_name, sample_data in data.iteritems()
+            for sample_name, sample_data in data.items()
         ]
 
         return cls(name, samples)

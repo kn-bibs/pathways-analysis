@@ -4,6 +4,7 @@ from test_command_line.utilities import parse
 
 from command_line.main import SingleFileExperimentFactory
 from methods import Method
+from models import Sample
 
 
 @pytest.fixture
@@ -35,8 +36,8 @@ def test_files(tmpdir):
         ),
         'merged.tsv': (
             'Gene	Control_1	Control_2	Tumour_1	Tumour_2',
-            'TP53	6	6	6	6',
-            'BRCA2	6	7	6	7',
+            'TP53	6	6	7	6',
+            'BRCA2	6	7	7	9',
         )
     }
 
@@ -47,15 +48,15 @@ def test_files(tmpdir):
         file_object.write('\n'.join(lines))
 
 
-def test_files_loading(test_files):
-    # method is obligatory, each parser execution will
-    # be prefixed with this method selection command
-
+def p_parse(command_line):
+    """Parse with prefix"""
     prefix = 'gsea '
+    # as some method is always obligatory, each parser execution
+    # will be prefixed with this method selection command
+    return parse(prefix + command_line)
 
-    def p_parse(command_line):
-        """Parse with prefix"""
-        return parse(prefix + command_line)
+
+def test_files_loading(test_files):
 
     accepted_commands = [
         'case t.tsv control c.tsv',
@@ -92,11 +93,41 @@ def test_files_loading(test_files):
     with pytest.raises(ValueError, message='Neither data nor (case & control) have been provided!'):
         p_parse('')
 
+
+def test_columns_purpose_deduction(test_files):
+
+    def make_samples(samples_dict):
+        return [
+            Sample.from_names(name, values)
+            for name, values in samples_dict.items()
+        ]
+
+    # all the other columns (id >= 2) are cases
+    commands = [
+        'data merged.tsv --control :2',
+        'data merged.tsv --control 0,1'
+    ]
+    expected_cases = {
+        'Tumour_1': {'TP53': 7, 'BRCA2': 7},
+        'Tumour_2': {'TP53': 6, 'BRCA2': 9},
+    }
+    expected_controls = {
+        'Control_1': {'TP53': 6, 'BRCA2': 6},
+        'Control_2': {'TP53': 6, 'BRCA2': 7},
+    }
+    for command in commands:
+
+        print(command)
+        opts = p_parse(command)
+
+        assert opts.control.phenotype.samples == make_samples(expected_controls)
+        assert opts.case.phenotype.samples == make_samples(expected_cases)
+
+
+def TODO():
     """
     cases = {
         # command => expected Namespace resulting from given command
-        # all the other columns 5 >= are controls
-        'case t.tsv --samples :4 --control c.tsv': '',
         'data merged.tsv --case :4': '',
         'data merged.tsv --control :3': '',
         'data merged.tsv --control 1,3' # all other are cases: '',
