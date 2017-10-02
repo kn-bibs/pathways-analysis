@@ -1,8 +1,7 @@
-import pytest
-
 from models import Gene, Sample, Phenotype
 
 # TODO method for creating samples faster
+
 
 def test_gene_init():
     gene = Gene('BAD')
@@ -28,7 +27,7 @@ def test_sample_from_names():
     assert all(isinstance(k, Gene) for k in sample.data.keys())
     assert [k.name for k in sample.data.keys()] == ['BAD', 'FUCA2']
     assert all(isinstance(v, float) for v in sample.data.values())
-    assert sample.data.values() == [1.2345, 6.5432]
+    assert list(sample.data.values()) == [1.2345, 6.5432]
 
 
 def test_phenotype_init():
@@ -40,6 +39,6 @@ def test_phenotype_init():
     phenotype = Phenotype('Tumour', samples)
 
     assert phenotype.name == 'Tumour'
-    assert all(isinstance(k, Sample) for k in phenotype.samples.keys())
+    assert all(isinstance(k, Sample) for k in phenotype.samples)
 
 # TODO test rest of phenotype methods

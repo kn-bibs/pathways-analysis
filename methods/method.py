@@ -6,7 +6,7 @@ from utils import AbstractRegisteringType, abstract_property
 class Method(metaclass=AbstractRegisteringType):
     """Defines method of pathway analysis & its arguments.
 
-    Simple argument (like `threshold`) can be simply defined as
+    Simple arguments (like `threshold`) can be simply defined as
     arguments and keyword arguments of `__init__`.
 
     For example:
