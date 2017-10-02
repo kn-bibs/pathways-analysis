@@ -155,13 +155,25 @@ class CLI(Parser):
                 if arg not in help_args
             ]
 
-            # do we have method name specified?
-            if len(args_without_help):
-                method_name = args_without_help[0]
-                method = Method.members[method_name]
-                method_parser = MethodParser(method=method)
+            if len(args_without_help) != 0:
 
-                return method_parser.parse(args_without_help[1:] + ['-h'])
+                name = args_without_help[0]
+
+                # in case of a conflict, help for both (for a sub-parser
+                # and for a method) should be displayed.
+
+                methods = {
+                    name: MethodParser(method=method)
+                    for name, method in Method.members.items()
+                }
+
+                def match_parser(subparsers):
+                    return subparsers.get(name, None)
+
+                all_subparsers = [methods, self.subparsers, self.lifted_parsers]
+
+                for parser in filter(bool, map(match_parser, all_subparsers)):
+                    return parser.parse(args_without_help[1:] + ['-h'])
 
         return super().parse(args)
 

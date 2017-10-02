@@ -62,22 +62,78 @@ class Argument:
 
 
 class Parser:
-    """
-    Uses arguments and subparser defined as class properties to initialize an ArgumentParser.
+    """Parser is a wrapper around Python built-in `argparse.ArgumentParser`.
+
+    Subclass the `Parser` to create your own parser.
+
+    Use help, description and epilog properties to adjust the help screen.
+    By default help and description will be auto-generated using docstring
+    and defined arguments.
+
+    Attach custom arguments and sub-parsers by defining class-variables
+    with `Argument` and `Parser` instances.
+
+    Example:
+
+        class TheParser(Parser):
+            help = 'This takes only one argument, but it is required'
+
+            arg = Argument(optional=False, help='This is required')
+
+        class MyParser(Parser):
+            description = 'This should be a longer text'
+
+            my_argument = Argument(type=int, help='some number')
+            my_sub_parser = TheParser()
+
+            epilog = 'You can create a footer with this'
+
+        # To execute the parser use:
+
+        parser = MyParser()
+
+        # The commands will usually be `sys.argv[1:]`
+        commands = '--my_argument 4 my_sub_parser value'.split()
+
+        namespace = parser.parse(commands)
+
+        # `namespace` is a normal `argparse.Namespace`
+        assert namespace.my_argument == 4
+        assert namespace.my_sub_parser.arg == 'value'
+
+    Implementation details:
+
+        To enable behaviour not possible with limited, plain `ArgumentParser`
+        (e.g. to dynamically attach a sub-parser, or to chain two or more
+        sub-parsers together) the stored actions and sub-parsers are:
+            - not attached permanently to the parser,
+            - attached in a tricky way to enable desired behaviour,
+            - executed directly or in hierarchical order.
+
+        Class-variables with parsers and arguments will be deep-copied on
+        initialization, so you do not have to worry about re-use of parsers.
     """
     # sub-parsers will have dynamically populated name variable
     name = None
 
     @property
     def help(self):
+        """A short message, shown as summary on >parent< parser help screen.
+
+        Help will be displayed for sub-parsers only.
+        """
         return (
-            (self.__doc__.format(name=self.name) if self.__doc__ else '') +
             ' Accepts: ' + ', '.join(self.arguments.keys())
         )
 
     @property
     def description(self):
-        return self.__doc__.format(name=self.name) if self.__doc__ else ''
+        """Longer description of the parser.
+
+        Description is shown when user narrows down the help
+        to the parser with: `./run.py sub_parser_name -h`.
+        """
+        return (self.__doc__ or '').format(name=self.name)
 
     @property
     def epilog(self):
@@ -85,7 +141,7 @@ class Parser:
         return None
 
     def __init__(self, **kwargs):
-        """Uses kwargs to populate namespace of the Parser."""
+        """Uses kwargs to pre-populate namespace of the `Parser`."""
         self.namespace = argparse.Namespace()
         self.parser = argparse.ArgumentParser(description=self.description, epilog=self.epilog)
 

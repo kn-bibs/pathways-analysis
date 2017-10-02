@@ -3,6 +3,7 @@ from contextlib import contextmanager
 
 import pytest
 
+from command_line.main import SingleFileExperimentFactory
 from command_line.parser import Argument
 from methods import Method
 from command_line import CLI
@@ -126,13 +127,36 @@ def parsing_output(capsys, contains=None, does_not_contain=None):
         assert does_not_contain not in text.std
 
 
-def test_help(capsys):
+def test_general_help(capsys):
 
     with parsing_output(capsys) as text:
         parse('--help')
 
     for method in Method.members:
         assert method in text.std
+
+
+def test_sub_parsers_help(capsys):
+    # is custom sub-parser screen displayed and description used included in it?
+    SingleFileExperimentFactory.description = 'A dummy description'
+    SingleFileExperimentFactory.epilog = 'A dummy epilog'
+
+    with parsing_output(capsys) as text:
+        parse('data --help')
+
+    lines = text.std.split('\n')
+    half_of_output = len(lines) // 2
+
+    # is description in the text and is it in the first 50% of lines?
+    assert any(
+        SingleFileExperimentFactory.description in line
+        for line in lines[:half_of_output]
+    )
+    # is the epilog in the text and is it in the last 50% of lines?
+    assert any(
+        SingleFileExperimentFactory.epilog in line
+        for line in lines[half_of_output:]
+    )
 
 
 def test_methods(capsys, test_files):
