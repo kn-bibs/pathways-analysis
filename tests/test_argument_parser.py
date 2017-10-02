@@ -38,6 +38,11 @@ def test_files(tmpdir):
             'TP53	6	6',
             'BRCA2	6	7',
         ),
+        't_2.tsv': (
+            'Gene	Tumour_3	Tumour_4',
+            'TP53	7	6',
+            'BRCA2	6	8',
+        ),
         'control_without_headers.tsv': (
             'TP53	5	6',
             'BRCA2	4	8',
@@ -63,10 +68,12 @@ def test_files_loading(test_files):
     prefix = 'gsea '
 
     accepted_commands = [
-        'case --files t.tsv control --files c.tsv',
-        'case --files t.tsv --samples Tumour_1 control --files c.tsv --samples Control_1',
-        'case --files t.tsv --samples Tumour_1 control --files c.tsv --samples Control_1,Control_2',
-        'data --files merged.tsv --case 1 --control 2'
+        'case t.tsv control c.tsv',
+        'case t.tsv --samples Tumour_1 control c.tsv --samples Control_1',
+        'case t.tsv --samples Tumour_1 control c.tsv --samples Control_1,Control_2',
+        'data merged.tsv --case 1 --control 2',
+        'data merged.tsv --case 2: --control :2',
+        'control c.tsv case t.tsv t_2.tsv'
     ]
 
     # TODO: this is not even a blackbox but will be developed soon
@@ -77,36 +84,34 @@ def test_files_loading(test_files):
     """
     cases = {
         # command => expected Namespace resulting from given command
-        '': '',
-        '--control control.ext --case tumour_1.ext': '',
-        '--control some_file.ext --case 20_degrees.ext 40_degrees.ext': '',
         # all the other columns 5 >= are controls
-        '--case some_file.ext --case_samples :4 --control som_file.ext': '',
-        '--data some_file.ext --case_samples :4': '',
-        '--data some_file.ext --control_samples :3': '',
-        '--data some_file.ext --control_samples 1,3 # all other are cases': '',
+        'case t.tsv --samples :4 --control c.tsv': '',
+        'data merged.tsv --case :4': '',
+        'data merged.tsv --control :3': '',
+        'data merged.tsv --control 1,3' # all other are cases: '',
+        
         # we want to ignore column number three altogether
-        '--data some_file.ext --case_samples 1,2,4 --control_samples 5-8': '',
-        '--data some_file.ext --case_samples 1,2,4 --control_samples 5:8': '',
-        '--control controls.ext --control_columns 1:4 --case case.ext --case_columns 1:3': '',
-        # TODO: czy większość danych ma headery? Czy switch powinien być domyślnie włączony?'
+        'data merged.tsv --case 1,2,4 --control 5-8': '',
+        'data merged.tsv --case 1,2,4 --control 5:8': '',
+        'control controls.ext --columns 1:4 case case.ext --case 1:3': '',
+        
+        # TODO: do we usually have sample names in headers?
+        # dnusnf should only affect 'case':
         (
-            '--control controls.ext --control_samples 1:4'
-            ' --case case.ext --case_samples 1:3'
+            'control controls.ext --columns 1:4'
+            ' case case.ext --columns 1:3'
             ' --do_not_use_sample_names_from_header'
         ): '',
         (
-            '--control controls.ext --name "20_degrees" --control_samples 1:4'
-            ' --case case.ext --name "40_degrees" --case_samples 1:3'
+            'control controls.ext --name "20_degrees" --columns 1:4'
+            ' case case.ext --name "40_degrees" --columns 1:3'
         ): '',
-        #' --control controls.ext 1:4 --case case.ext 1-3': '',
+        #'control controls.ext 1:4 case case.ext 1-3': '',
         # test multiple cases
-        #'--control controls.ext 1:4 --case "20_degrees" case.ext 1-3 --case "40_degrees" case.ext 4-5': '',
+        #'control controls.ext 1:4 case "20_degrees" case.ext 1-3 case "40_degrees" case.ext 4-5': '',
         #
-        #'--control controls.ext 1:4 --case "20_degrees" case.ext 1-3 --case "20_degrees" case2.ext 4-5': ''
+        #'control controls.ext 1:4 case "20_degrees" case.ext 1-3 case "20_degrees" case2.ext 4-5': ''
     }
-    for command, result in cases.items():
-        assert parse(prefix + command) == result
     """
 
 
@@ -160,7 +165,7 @@ def test_sub_parsers_help(capsys):
 
 
 def test_methods(capsys, test_files):
-    suffix = 'case --files t.tsv control --files c.tsv'
+    suffix = 'case t.tsv control c.tsv'
 
     class MyMethod(Method):
 

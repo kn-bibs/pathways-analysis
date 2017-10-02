@@ -248,13 +248,20 @@ class Parser:
                     arg_str
                     for key in parser.subparsers
                     for arg_str in [key, *grouped_args[key]]
+                    # only include the sub-parser if it was explicitly enlisted
+                    if key in grouped_args
                 ])
 
                 for key, value in vars(namespace).items():
                     setattr(self.namespace, key, value)
             else:
-                namespace, not_parsed_args = parser.parse_known_args(grouped_args[name])
-                setattr(self.namespace, name, namespace)
+                # only invoke sub-parser parsing if it was explicitly enlisted
+                if name in grouped_args:
+                    namespace, not_parsed_args = parser.parse_known_args(grouped_args[name])
+                    setattr(self.namespace, name, namespace)
+                else:
+                    setattr(self.namespace, name, None)
+                    not_parsed_args = None
 
             assert not not_parsed_args
 

@@ -12,8 +12,7 @@ class PhenotypeFactory(Parser):
     """Provide {name} samples"""
 
     # at least one file is always required
-    # TODO do not require name
-    files = Argument(type=argparse.FileType('r'), nargs='+')
+    files = Argument(type=argparse.FileType('r'), nargs='+', optional=False)
 
     name = Argument(help='Your custom name for this set of samples.')
 
@@ -67,19 +66,17 @@ class SingleFileExperimentFactory(Parser):
     files = Argument(
         type=argparse.FileType('r'),
         nargs=1,    # transforms result into a single-element list
-        # required=True,
+        optional=False,
         help='file with samples for both control and cases.'
     )
     case = Argument(
         type=one_of(Slice, Indices),
         nargs=1,
-        # required=True,
         help='columns from which case samples should be extracted.'
     )
     control = Argument(
         type=one_of(Slice, Indices),
         nargs=1,
-        # required=True,
         help='columns from which control samples should be extracted.',
     )
 
@@ -88,6 +85,8 @@ class SingleFileExperimentFactory(Parser):
         opts = self.namespace
 
         if opts.files:
+            # TODO: we should enforce that either case or control is provided
+
             opts.control = PhenotypeFactory(name='control', files=opts.files, columns=opts.control).produce()
             # reuse the same file
             for f in opts.files:
@@ -109,13 +108,13 @@ class CLIExperiment(Parser):
     def produce(self, unknown_args=None):
 
         opts = self.namespace
-        if opts.data.files:
-            if opts.control.files or opts.case.files:
+        if opts.data:
+            if opts.control or opts.case:
                 raise ValueError('Cannot handle data and case/control at once')
 
             opts.case = self.data.namespace.case
             opts.control = self.data.namespace.control
-        elif opts.case.files and opts.control.files:
+        elif opts.case and opts.control:
             # that's nice :)
             pass
         else:
