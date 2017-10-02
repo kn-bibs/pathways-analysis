@@ -1,6 +1,6 @@
 import argparse
 from collections import defaultdict
-from copy import copy, deepcopy
+from copy import deepcopy
 
 
 def group_arguments(args, group_names):
@@ -27,7 +27,10 @@ class Argument:
     `type` and `help` will be automatically deduced.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(
+            self, name=None, short=None, optional=True,
+            as_many_as: 'Argument'=None, **kwargs
+    ):
         """
         Args:
             name:
@@ -38,13 +41,17 @@ class Argument:
             optional:
                 by default True, provide False
                 to make the argument required
+            as_many_as:
+                if provided, will check if len() of the produced
+                value is equal to len() of the provided argument
             **kwargs:
                 other keyword arguments which are
                 supported by `argparse.add_argument()`
         """
-        self.name = kwargs.pop('name', None)
-        self.short_name = kwargs.pop('short', None)
-        self.optional = kwargs.pop('optional', True)
+        self.name = name
+        self.short_name = short
+        self.optional = optional
+        self.as_many_as = as_many_as
         self.kwargs = kwargs
 
     @property
@@ -59,6 +66,23 @@ class Argument:
             args.append(self.name)
 
         return args
+
+    @staticmethod
+    def as_numerous_as(partner, myself):
+        if partner and myself:
+            return len(partner) == len(myself)
+        return True
+
+    def validate(self, opts):
+        myself = getattr(opts, self.name)
+
+        if self.as_many_as:
+            partner = getattr(opts, self.as_many_as.name)
+            if not self.as_numerous_as(myself, partner):
+                raise ValueError(
+                    f'{self.name} for {len(myself)} {self.as_many_as.name} '
+                    f'provided, expected for {len(partner)}'
+                )
 
 
 class Parser:
@@ -110,8 +134,8 @@ class Parser:
             - attached in a tricky way to enable desired behaviour,
             - executed directly or in hierarchical order.
 
-        Class-variables with parsers and arguments will be deep-copied on
-        initialization, so you do not have to worry about re-use of parsers.
+        Class-variables with parsers will be deep-copied on initialization,
+        so you do not have to worry about re-use of parsers.
     """
     # sub-parsers will have dynamically populated name variable
     name = None
@@ -232,7 +256,6 @@ class Parser:
         return self.__class__(**self.kwargs)
 
     def bind_argument(self, argument, name=None):
-        argument = copy(argument)
         if not argument.name and name:
             argument.name = name
         self.arguments[name] = argument
@@ -271,9 +294,18 @@ class Parser:
         )
         assert namespace is self.namespace
 
+        self.validate(self.namespace)
+
         opts = self.produce(unknown_args)
+        assert opts is self.namespace
 
         return self.namespace, unknown_args
+
+    def validate(self, opts):
+        if not opts:
+            opts = self.namespace
+        for argument in self.all_arguments.values():
+            argument.validate(opts)
 
     @property
     def pull_to_namespace_above(self):

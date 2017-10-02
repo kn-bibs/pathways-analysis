@@ -9,33 +9,46 @@ from .method_parser import MethodParser
 
 
 class PhenotypeFactory(Parser):
-    """Provide {name} samples"""
+    """Provide {name} samples. Requires a file (or files) with samples.
 
-    # at least one file is always required
-    files = Argument(type=argparse.FileType('r'), nargs='+', optional=False)
+     The files should come in Delimiter Separate Values format
+     (like .csv or .tsv). The default delimiter is a tab character.
+     First column of each file should contain gene identifiers.
+
+     To use only a subset of samples from files(s) specify column numbers
+     (--columns) or sample names (--samples) of desired samples.
+     """
+
+    files = Argument(
+        type=argparse.FileType('r'),
+        # at least one file is always required
+        nargs='+',
+        optional=False
+    )
 
     name = Argument(help='Your custom name for this set of samples.')
 
     samples = Argument(
         type=dsv(str),
         nargs='*',
+        as_many_as=files,
         help='Names of samples (columns) to be extracted from the file. '
              'Sample names are determined from the first non-empty row. '
              'Use comma to separate samples. '
              'Samples for each of files should be separated by space.'
     )
 
-    # we want to handle either ":4", "5:" or even "1,2,3"
     columns = Argument(
-        type=dsv(one_of(Slice, Indices), delimiter=' '),
+        # we want to handle either ":4", "5:" or even "1,2,3"
+        type=one_of(Slice, Indices),
         # user may (but do not have to) specify columns
-        # to be extracted from given file.
+        # to be extracted from given file(s).
         nargs='*',
+        as_many_as=files,
         help='Columns to be extracted from files: '
              'either a comma delimited list of 0-based numbers (e.g. 0,2,3) '
              'or a range defined using Python slice notation (e.g. 3:10). '
              'Columns for each of files should be separated by space.'
-        # TODO assert if columns: len(files) == len(columns)
     )
 
     def produce(self, unknown_args=None):
@@ -45,6 +58,7 @@ class PhenotypeFactory(Parser):
         if opts.files:
             # load all files
             sample_collections = []
+
             for i, file_obj in enumerate(opts.files):
                 sample_collections.append(
                     Phenotype.from_file(
@@ -85,7 +99,7 @@ class SingleFileExperimentFactory(Parser):
         opts = self.namespace
 
         if opts.files:
-            # TODO: we should enforce that either case or control is provided
+            # TODO: we should enforce that either case or control (or both) is provided
 
             opts.control = PhenotypeFactory(name='control', files=opts.files, columns=opts.control).produce()
             # reuse the same file

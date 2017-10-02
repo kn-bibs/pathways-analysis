@@ -20,6 +20,14 @@ def parse(command_line):
     return CLI().parse(commands)
 
 
+def test_slice():
+    pass
+
+
+def test_indices():
+    pass
+
+
 @pytest.fixture
 def test_files(tmpdir):
     # Here I assume that all the files are in TSV format (for now, we may want to change this in the future)
@@ -67,19 +75,32 @@ def test_files_loading(test_files):
 
     prefix = 'gsea '
 
+    def p_parse(command_line):
+        """Parse with prefix"""
+        return parse(prefix + command_line)
+
     accepted_commands = [
         'case t.tsv control c.tsv',
         'case t.tsv --samples Tumour_1 control c.tsv --samples Control_1',
         'case t.tsv --samples Tumour_1 control c.tsv --samples Control_1,Control_2',
         'data merged.tsv --case 1 --control 2',
         'data merged.tsv --case 2: --control :2',
-        'control c.tsv case t.tsv t_2.tsv'
+        'control c.tsv case t.tsv t_2.tsv',
+        # take all columns from t.tsv file and first column from t_2.tsv
+        'control c.tsv case t.tsv t_2.tsv --columns 1,2 1'
     ]
 
     # TODO: this is not even a blackbox but will be developed soon
     for command in accepted_commands:
         print(command)
-        parse(prefix + command)
+        p_parse(command)
+
+    with pytest.raises(ValueError, message='columns for 2 files provided, expected for 1'):
+        # the user should use --columns 1,2 instead
+        p_parse('control c.tsv case t.tsv --columns 1 2')
+
+    with pytest.raises(ValueError, message='columns for 1 files provided, expected for 2'):
+        p_parse('control c.tsv case t.tsv t_2.tsv --columns 1')
 
     """
     cases = {

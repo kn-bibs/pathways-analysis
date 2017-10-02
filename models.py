@@ -130,8 +130,7 @@ class Phenotype:
             use_header: does the file has header?
         """
         if file_object.tell() != 0:
-            warn('Passed file object was read before.')
-            print(file_object)
+            warn(f'Passed file object: {file_object} was read before.')
             raise Exception()
 
         line = first_line(file_object)

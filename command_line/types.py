@@ -54,7 +54,7 @@ def positive_int(value):
 class Indices(Subset, StringHandlingMixin):
 
     separator = ','
-    item_type = positive_int
+    item_type = staticmethod(positive_int)
     data_type = set
 
     def get_iterator(self, iterable):
