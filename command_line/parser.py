@@ -1,4 +1,5 @@
 import argparse
+import textwrap
 from collections import defaultdict
 from copy import deepcopy
 
@@ -89,6 +90,11 @@ class Argument:
                 )
 
 
+def dedent_help(text):
+    """Dedent text by four spaces"""
+    return textwrap.dedent(' ' * 4 + text)
+
+
 class Parser:
     """Parser is a wrapper around Python built-in `argparse.ArgumentParser`.
 
@@ -166,7 +172,7 @@ class Parser:
     @property
     def epilog(self):
         """Use this to append text after the help message"""
-        return None
+        return ''
 
     def __init__(self, parser_name=None, **kwargs):
         """Uses kwargs to pre-populate namespace of the `Parser`.
@@ -176,7 +182,9 @@ class Parser:
         """
         self.namespace = argparse.Namespace()
         self.parser_name = parser_name
-        self.parser = argparse.ArgumentParser(description=self.description, epilog=self.epilog)
+        self.parser = argparse.ArgumentParser(
+            formatter_class=argparse.RawDescriptionHelpFormatter
+        )
 
         self.arguments = {}
         # children parsers
@@ -236,8 +244,8 @@ class Parser:
         """
         # regenerate description and epilog: enables use of custom variables
         # (which may be not yet populated at init.) in descriptions epilogues
-        self.parser.description = self.description
-        self.parser.epilog = self.epilog
+        self.parser.description = dedent_help(self.description)
+        self.parser.epilog = dedent_help(self.epilog)
 
         native_sub_parser = self.parser.add_subparsers()
 
