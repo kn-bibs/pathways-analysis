@@ -228,9 +228,6 @@ class Phenotype:
                 'not both. We will use columns this time.'
             )
 
-        print(columns or samples, use_header, header_line, prefix)
-        print(file_object.readlines())
-        file_object.seek(0)
         data = pd.read_table(
             file_object,
             delimiter=delimiter,
