@@ -112,7 +112,8 @@ class Phenotype:
             cls, name, file_object,
             columns_selector: Callable[[Sequence[int]], Sequence[int]]=None,
             samples=None, delimiter: str='\t', index_col: int=0,
-            use_header=True, reverse_selection=False
+            use_header=True, reverse_selection=False, prefix=None,
+            header_line=0
     ):
         """Create a phenotype (collection of samples) from csv/tsv file.
 
@@ -140,6 +141,8 @@ class Phenotype:
             delimiter: the delimiter of the columns
             index_col: column to use as the gene names
             use_header: does the file has header?
+            prefix: prefix for custom samples naming schema
+            header_line: number of non-empty line with sample names
         """
         if file_object.tell() != 0:
             warn(f'Passed file object: {file_object} was read before.')
@@ -169,28 +172,30 @@ class Phenotype:
         else:
             columns = None
 
-        if samples and not use_header:
-            raise ValueError(
-                'To select samples by their name, you need a file with '
-                'samples names in header. If you use such file, please set '
-                '`use_header=True`, otherwise skip `samples` in your arguments.'
-            )
+        if not use_header:
+            if samples:
+                raise ValueError(
+                    'To select samples by their name, you need a file with '
+                    'samples names in header. If you use such file, '
+                    'please set `use_header=True`, otherwise skip `samples` '
+                    'in your arguments.'
+                )
+            if header_line:
+                warn(
+                    '`header_line` has no effect when '
+                    '`use_header` is set to `False`'
+                )
 
         # we could leave it to pandas, but it shows an ugly,
         # not very helpful message. It is better to show the
         # user where exactly the problem occurs.
         if samples:
-            if index_col:
-                # TODO https://github.com/pandas-dev/pandas/issues/9098
-                warn(
-                    'Using "samples" with "index_col" != 0 may cause'
-                    ' an unexpected behaviour due to an upstream issue'
-                    'in pandas package (pandas-dev/pandas/issues/9098)'
-                )
+
+            header_items = line.split('\t')
 
             available_samples = [
                 name.strip()
-                for name in line.split('\t')[index_col + 1:]
+                for name in header_items[index_col + 1:]
             ]
 
             lacking_samples = set(samples) - set(available_samples)
@@ -200,6 +205,18 @@ class Phenotype:
                     f'Samples {lacking_samples} are not available in {file_object.name} file.\n'
                     f'Following samples were found: {", ".join(available_samples)}.'
                 )
+
+            if index_col:
+                # TODO https://github.com/pandas-dev/pandas/issues/9098
+                warn(
+                    'Using "samples" with "index_col" 0 may cause an '
+                    'unexpected behaviour due to an upstream issue in '
+                    'pandas package (pandas-dev/pandas/issues/9098) '
+                    'for pandas in versions older than 0.21.'
+                )
+
+            # https://github.com/pandas-dev/pandas/issues/9098#issuecomment-333677100
+            samples = [header_items[index_col].strip()] + list(samples)
 
         # just to reassure that the pointer is on the beginning
         if file_object.tell() != 0:
@@ -211,14 +228,17 @@ class Phenotype:
                 'not both. We will use columns this time.'
             )
 
+        print(columns or samples, use_header, header_line, prefix)
+        print(file_object.readlines())
+        file_object.seek(0)
         data = pd.read_table(
             file_object,
             delimiter=delimiter,
             # None - do not use, 0 - use first row
-            header=0 if use_header else None,
+            header=header_line if use_header else None,
             index_col=index_col,
             usecols=columns or samples,
-            # prefix=f'{name}_' TODO
+            prefix=f'{prefix}_' if prefix else ''
         )
 
         samples = [

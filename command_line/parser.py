@@ -53,6 +53,7 @@ class Argument:
         self.optional = optional
         self.as_many_as = as_many_as
         self.kwargs = kwargs
+        self.default = kwargs.get('default', None)
 
     @property
     def args(self):
@@ -68,7 +69,10 @@ class Argument:
         return args
 
     @staticmethod
-    def as_numerous_as(partner, myself):
+    def as_numerous_as(myself, partner):
+        # if we have callable, we can call it as many times as we want
+        if callable(myself):
+            return True
         if partner and myself:
             return len(partner) == len(myself)
         return True
@@ -190,8 +194,8 @@ class Parser:
                     handler(attribute, name)
 
         # initialize namespace
-        for name in self.all_arguments:
-            setattr(self.namespace, name, None)
+        for name, argument in self.all_arguments.items():
+            setattr(self.namespace, name, argument.default)
 
         for name, value in kwargs.items():
             setattr(self.namespace, name, value)

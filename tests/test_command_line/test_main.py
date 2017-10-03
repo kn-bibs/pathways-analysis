@@ -1,4 +1,4 @@
-import pytest
+from pytest import fixture, raises
 from test_command_line.utilities import parsing_output
 from test_command_line.utilities import parse
 
@@ -7,7 +7,26 @@ from methods import Method
 from models import Sample
 
 
-@pytest.fixture
+def make_samples(samples_dict):
+    """Create samples from dict representation"""
+    return [
+        Sample.from_names(name, values)
+        for name, values in samples_dict.items()
+    ]
+
+
+expected_cases = make_samples({
+    'Tumour_1': {'TP53': 7, 'BRCA2': 7},
+    'Tumour_2': {'TP53': 6, 'BRCA2': 9},
+})
+
+expected_controls = make_samples({
+    'Control_1': {'TP53': 6, 'BRCA2': 6},
+    'Control_2': {'TP53': 6, 'BRCA2': 7},
+})
+
+
+@fixture
 def test_files(tmpdir):
     # Here I assume that all the files are in TSV format (for now, we may want to change this in the future)
 
@@ -17,13 +36,13 @@ def test_files(tmpdir):
         # mark that the strings represent some file names.
         'c.tsv': (
             'Gene	Control_1	Control_2',
-            'TP53	1	2',
-            'BRCA2	4	5',
+            'TP53	6	6',
+            'BRCA2	6	7',
         ),
         't.tsv': (
             'Gene	Tumour_1	Tumour_2',
-            'TP53	6	6',
-            'BRCA2	6	7',
+            'TP53	7	6',
+            'BRCA2	7	9',
         ),
         't_2.tsv': (
             'Gene	Tumour_3	Tumour_4',
@@ -40,6 +59,10 @@ def test_files(tmpdir):
             'BRCA2	6	7	7	9',
         )
     }
+    create_files(tmpdir, files)
+
+
+def create_files(tmpdir, files):
 
     tmpdir.chdir()
 
@@ -53,54 +76,72 @@ def p_parse(command_line):
     prefix = 'gsea '
     # as some method is always obligatory, each parser execution
     # will be prefixed with this method selection command
-    return parse(prefix + command_line)
+    try:
+        return parse(prefix + command_line)
+    except (Exception, SystemExit) as e:
+        # we need the command to find out what caused the error
+        print(command_line)
+        raise e
 
 
 def test_files_loading(test_files):
 
     accepted_commands = [
         'case t.tsv control c.tsv',
-        'case t.tsv --samples Tumour_1 control c.tsv --samples Control_1',
-        'case t.tsv --samples Tumour_1 control c.tsv --samples Control_1,Control_2',
-        'data merged.tsv --case 1 --control 2',
-        'data merged.tsv --case 2: --control :2',
         'control c.tsv case t.tsv t_2.tsv',
         # take all columns from t.tsv file and first column from t_2.tsv
         'control c.tsv case t.tsv t_2.tsv --columns 1,2 1'
     ]
 
-    # TODO: this is not even a blackbox but will be developed soon
+    # TODO: get rid of accepted_commands. Following tests need to be written:
+    # TODO: 2) for --columns and multiple files (positive one)
+    # TODO: 3) A basic, thought test for 'case t.tsv control c.tsv'.
     for command in accepted_commands:
-        try:
-            p_parse(command)
-        except (Exception, SystemExit) as e:
-            # we need the command to find out what caused the error
-            print(command)
-            raise e
+        p_parse(command)
 
     # TODO: make validation errors raise in parser context (but still easily testable!)
 
-    with pytest.raises(ValueError, message='columns for 2 files provided, expected for 1'):
+    with raises(ValueError, match='columns for 2 files provided, expected for 1'):
         # the user should use --columns 1,2 instead
         p_parse('control c.tsv case t.tsv --columns 1 2')
 
-    with pytest.raises(ValueError, message='columns for 1 files provided, expected for 2'):
+    with raises(ValueError, match='columns for 1 files provided, expected for 2'):
         p_parse('control c.tsv case t.tsv t_2.tsv --columns 1')
 
-    with pytest.raises(ValueError, message='Cannot handle data and case/control at once'):
-        p_parse('data merged.tsv control c.tsv')
-
-    with pytest.raises(ValueError, message='Neither data nor (case & control) have been provided!'):
+    with raises(ValueError, match='Neither data nor \(case & control\) have been provided!'):
         p_parse('')
 
 
-def test_columns_purpose_deduction(test_files):
+def test_select_samples_by_name(test_files):
 
-    def make_samples(samples_dict):
-        return [
-            Sample.from_names(name, values)
-            for name, values in samples_dict.items()
-        ]
+    # lets select only first samples from both files
+    opts = p_parse(
+        'case t.tsv --samples Tumour_1 control c.tsv --samples Control_1'
+    )
+
+    assert opts.control.phenotype.samples == expected_controls[:1]
+    assert opts.case.phenotype.samples == expected_cases[:1]
+
+    # get both tumour samples from file t.tsv and
+    # the first sample (Tumour_3) from file t_2.tsv
+    opts = p_parse(
+        'case t.tsv t_2.tsv --samples Tumour_1,Tumour_2 Tumour_3 control c.tsv'
+    )
+
+    assert len(opts.case.phenotype.samples) == 3
+
+    # lets try to grab a sample which is not in the file
+
+    expected_message = (
+        "Samples {'Control_1'} are not available in t.tsv file.\n"
+        "Following samples were found: Tumour_1, Tumour_2."
+    )
+
+    with raises(ValueError, match=expected_message):
+        p_parse('case t.tsv --samples Control_1 control c.tsv')
+
+
+def test_columns_purpose_deduction(test_files):
 
     # all the other columns (id >= 2) are cases
     commands = [
@@ -109,49 +150,91 @@ def test_columns_purpose_deduction(test_files):
         'data merged.tsv --case 2:',
         'data merged.tsv --case 2,3'
     ]
-    expected_cases = {
-        'Tumour_1': {'TP53': 7, 'BRCA2': 7},
-        'Tumour_2': {'TP53': 6, 'BRCA2': 9},
-    }
-    expected_controls = {
-        'Control_1': {'TP53': 6, 'BRCA2': 6},
-        'Control_2': {'TP53': 6, 'BRCA2': 7},
-    }
     for command in commands:
-
-        print(command)
         opts = p_parse(command)
 
-        assert opts.control.phenotype.samples == make_samples(expected_controls)
-        assert opts.case.phenotype.samples == make_samples(expected_cases)
+        assert opts.control.phenotype.samples == expected_controls
+        assert opts.case.phenotype.samples == expected_cases
 
 
-def TODO():
-    """
-    cases = {
-        # we want to ignore column number three altogether
-        'data merged.tsv --case 1,2,4 --control 5-8': '',
-        'data merged.tsv --case 1,2,4 --control 5:8': '',
-        'control controls.ext --columns 1:4 case case.ext --case 1:3': '',
-        
-        # TODO: do we usually have sample names in headers?
-        # dnusnf should only affect 'case':
-        (
-            'control controls.ext --columns 1:4'
-            ' case case.ext --columns 1:3'
-            ' --do_not_use_sample_names_from_header'
-        ): '',
-        (
-            'control controls.ext --name "20_degrees" --columns 1:4'
-            ' case case.ext --name "40_degrees" --columns 1:3'
-        ): '',
-        #'control controls.ext 1:4 case case.ext 1-3': '',
-        # test multiple cases
-        #'control controls.ext 1:4 case "20_degrees" case.ext 1-3 case "40_degrees" case.ext 4-5': '',
-        #
-        #'control controls.ext 1:4 case "20_degrees" case.ext 1-3 case "20_degrees" case2.ext 4-5': ''
+def test_non_tab_delimiter(tmpdir):
+
+    create_files(tmpdir, {
+        'c.tsv': (
+            'Gene,Control_1,Control_2',
+            'TP53,6,6',
+            'BRCA2,6,7',
+        ),
+        't.tsv': (
+            'Gene	Tumour_1	Tumour_2',
+            'TP53	7	6',
+            'BRCA2	7	9',
+        ),
+    })
+
+    opts = p_parse('case t.tsv control c.tsv --delimiter ,')
+
+    assert opts.control.phenotype.samples == expected_controls
+    assert opts.case.phenotype.samples == expected_cases
+
+
+# TODO: do we usually have sample names in headers?
+def test_custom_sample_names(test_files):
+
+    opts = p_parse(
+        'case t.tsv control c.tsv t_2.tsv --header my_control their_control'
+    )
+
+    # case should not be affected anyhow there
+    assert opts.case.phenotype.samples == expected_cases
+
+    controls = opts.control.phenotype.samples
+
+    # are two files loaded? (each have two samples)
+    assert len(controls) == 4
+
+    sample_names = {control.name for control in controls}
+
+    expected_names = {
+        'my_control_1', 'my_control_2',
+        'their_control_1', 'their_control_2'
     }
-    """
+
+    assert expected_names == sample_names
+
+
+def test_merged_file(test_files):
+    # advanced columns purpose inferring/deduction is tested separately
+    # in `test_columns_purpose_deduction`
+
+    # merged.tsv has two controls and two tumours, in this order
+
+    commands_first_samples = [
+        'data merged.tsv --case 2 --control 0',
+        'data merged.tsv --case 2,2 --control 0,0',
+    ]
+    for command in commands_first_samples:
+        opts = p_parse(command)
+
+        assert opts.control.phenotype.samples == expected_controls[:1]
+        assert opts.case.phenotype.samples == expected_cases[:1]
+
+    commands_all_samples = [
+        'data merged.tsv --case 2: --control :2',
+        'data merged.tsv --case 2,3 --control 0:2',
+        'data merged.tsv --case 2-4 --control 0-2'
+    ]
+    for command in commands_all_samples:
+        opts = p_parse(command)
+
+        assert opts.control.phenotype.samples == expected_controls
+        assert opts.case.phenotype.samples == expected_cases
+
+    with raises(ValueError, match='Neither --case nor --control provided'):
+        p_parse('data merged.tsv')
+
+    with raises(ValueError, match='Cannot handle data and case/control at once'):
+        p_parse('data merged.tsv --case 1 --control 2 control c.tsv')
 
 
 def test_general_help(capsys):

@@ -4,7 +4,7 @@ from methods import Method
 from models import Phenotype, Experiment
 
 from .parser import Parser, Argument
-from .types import Slice, one_of, Indices, dsv
+from .types import Slice, one_of, Indices, dsv, Range
 from .method_parser import MethodParser
 
 
@@ -40,7 +40,7 @@ class PhenotypeFactory(Parser):
 
     columns = Argument(
         # we want to handle either ":4", "5:" or even "1,2,3"
-        type=one_of(Slice, Indices),
+        type=one_of(Slice, Indices, Range),
         # user may (but do not have to) specify columns
         # to be extracted from given file(s).
         nargs='*',
@@ -51,6 +51,28 @@ class PhenotypeFactory(Parser):
              'Columns for each of files should be separated by space.'
     )
 
+    delimiter = Argument(
+        default='\t',
+        help='Delimiter of the provided file(s). Default: tabulation mark.'
+    )
+
+    header = Argument(
+        nargs='*',
+        type=one_of(int, str),
+        as_many_as=files,
+        default=lambda file_object: 0,
+        help='Defines how the sample names should be created. '
+             'Provide a number to specify which line should be used '
+             'to extract names for samples. Please remember that '
+             'empty lines will be skipped. If your file has no row '
+             'with sample names, provide a string to be used as a '
+             'prefix for naming consecutive samples. '
+             'For example, `--header cancer` will lead to naming '
+             'all relevant samples like: cancer_1, cancer_2, etc. '
+             'Default: create sample names from first non-empty '
+             'line in the file.'
+    )
+
     def produce(self, unknown_args=None):
         opts = self.namespace
         name = opts.name or self.name
@@ -59,14 +81,24 @@ class PhenotypeFactory(Parser):
             # load all files
             sample_collections = []
 
+            if callable(opts.header):
+                opts.header = [opts.header(f) for f in opts.files]
+
             for i, file_obj in enumerate(opts.files):
+
+                use_header = type(opts.header[i]) is int
+
                 sample_collections.append(
                     Phenotype.from_file(
                         f'Sample collection, part {i} of {name}',
                         file_obj,
                         columns_selector=opts.columns[i].get_iterator if opts.columns else None,
                         samples=opts.samples[i] if opts.samples else None,
-                        reverse_selection=getattr(opts, 'reverse', False)
+                        reverse_selection=getattr(opts, 'reverse', False),
+                        delimiter=opts.delimiter,
+                        header_line=opts.header[i] if use_header else None,
+                        use_header=use_header,
+                        prefix=opts.header[i] if not use_header else None
                     )
                 )
 
@@ -99,12 +131,12 @@ class SingleFileExperimentFactory(Parser):
         help='file with samples for both control and cases.'
     )
     case = Argument(
-        type=one_of(Slice, Indices),
+        type=one_of(Slice, Indices, Range),
         nargs=1,
         help='columns from which case samples should be extracted.'
     )
     control = Argument(
-        type=one_of(Slice, Indices),
+        type=one_of(Slice, Indices, Range),
         nargs=1,
         help='columns from which control samples should be extracted.',
     )
