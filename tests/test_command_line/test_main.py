@@ -84,51 +84,44 @@ def p_parse(command_line):
         raise e
 
 
-def test_files_loading(test_files):
+def test_simple_files_loading(test_files):
+    """Only general tests, no details here"""
 
-    accepted_commands = [
-        'case t.tsv control c.tsv',
-        'control c.tsv case t.tsv t_2.tsv',
-        # take all columns from t.tsv file and first column from t_2.tsv
-        'control c.tsv case t.tsv t_2.tsv --columns 1,2 1'
-    ]
+    # one file for case, one for control
+    opts = p_parse('case t.tsv control c.tsv')
+    assert len(opts.case.phenotype.samples) == 2
 
-    # TODO: get rid of accepted_commands. Following tests need to be written:
-    # TODO: 2) for --columns and multiple files (positive one)
-    # TODO: 3) A basic, thought test for 'case t.tsv control c.tsv'.
-    for command in accepted_commands:
-        p_parse(command)
-
-    # TODO: make validation errors raise in parser context (but still easily testable!)
-
-    with raises(ValueError, match='columns for 2 files provided, expected for 1'):
-        # the user should use --columns 1,2 instead
-        p_parse('control c.tsv case t.tsv --columns 1 2')
-
-    with raises(ValueError, match='columns for 1 files provided, expected for 2'):
-        p_parse('control c.tsv case t.tsv t_2.tsv --columns 1')
+    # two files for case, one for control
+    opts = p_parse('control c.tsv case t.tsv t_2.tsv')
+    assert len(opts.case.phenotype.samples) == 4
 
     with raises(ValueError, match='Neither data nor \(case & control\) have been provided!'):
         p_parse('')
 
 
-def test_select_samples_by_name(test_files):
+def test_select_samples(test_files):
 
     # lets select only first samples from both files
-    opts = p_parse(
+    commands = [
+        'case t.tsv --columns 0 control c.tsv --columns 0',
         'case t.tsv --samples Tumour_1 control c.tsv --samples Control_1'
-    )
+    ]
+    for command in commands:
+        opts = p_parse(command)
 
-    assert opts.control.phenotype.samples == expected_controls[:1]
-    assert opts.case.phenotype.samples == expected_cases[:1]
+        assert opts.control.phenotype.samples == expected_controls[:1]
+        assert opts.case.phenotype.samples == expected_cases[:1]
 
     # get both tumour samples from file t.tsv and
     # the first sample (Tumour_3) from file t_2.tsv
-    opts = p_parse(
+    commands = [
+        'control c.tsv case t.tsv t_2.tsv --columns 0,1 0',
         'case t.tsv t_2.tsv --samples Tumour_1,Tumour_2 Tumour_3 control c.tsv'
-    )
+    ]
 
-    assert len(opts.case.phenotype.samples) == 3
+    for command in commands:
+        opts = p_parse(command)
+        assert len(opts.case.phenotype.samples) == 3
 
     # lets try to grab a sample which is not in the file
 
@@ -139,6 +132,13 @@ def test_select_samples_by_name(test_files):
 
     with raises(ValueError, match=expected_message):
         p_parse('case t.tsv --samples Control_1 control c.tsv')
+
+    with raises(ValueError, match='columns for 2 files provided, expected for 1'):
+        # the user should use --columns 0,1 instead
+        p_parse('control c.tsv case t.tsv --columns 0 1')
+
+    with raises(ValueError, match='columns for 1 files provided, expected for 2'):
+        p_parse('control c.tsv case t.tsv t_2.tsv --columns 1')
 
 
 def test_columns_purpose_deduction(test_files):
@@ -178,7 +178,6 @@ def test_non_tab_delimiter(tmpdir):
     assert opts.case.phenotype.samples == expected_cases
 
 
-# TODO: do we usually have sample names in headers?
 def test_custom_sample_names(test_files):
 
     opts = p_parse(

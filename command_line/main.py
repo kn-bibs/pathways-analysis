@@ -56,6 +56,7 @@ class PhenotypeFactory(Parser):
         help='Delimiter of the provided file(s). Default: tabulation mark.'
     )
 
+    # TODO: do we usually have sample names in headers (the default assumes that we have)
     header = Argument(
         nargs='*',
         type=one_of(int, str),

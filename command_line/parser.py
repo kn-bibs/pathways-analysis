@@ -298,6 +298,7 @@ class Parser:
         )
         assert namespace is self.namespace
 
+        # TODO: make validation (and production) errors raise in parser context
         self.validate(self.namespace)
 
         opts = self.produce(unknown_args)
