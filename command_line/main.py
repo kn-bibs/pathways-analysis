@@ -9,7 +9,7 @@ from .method_parser import MethodParser
 
 
 class PhenotypeFactory(Parser):
-    """Provide {name} samples. Requires a file (or files) with samples.
+    """Provide {parser_name} samples. Requires a file (or files) with samples.
 
      The files should come in Delimiter Separate Values format
      (like .csv or .tsv). The default delimiter is a tab character.

@@ -142,7 +142,7 @@ class Parser:
         so you do not have to worry about re-use of parsers.
     """
     # sub-parsers will have dynamically populated name variable
-    name = None
+    parser_name = None
 
     @property
     def help(self):
@@ -161,16 +161,21 @@ class Parser:
         Description is shown when user narrows down the help
         to the parser with: `./run.py sub_parser_name -h`.
         """
-        return (self.__doc__ or '').format(name=self.name)
+        return (self.__doc__ or '').format(**vars(self))
 
     @property
     def epilog(self):
         """Use this to append text after the help message"""
         return None
 
-    def __init__(self, **kwargs):
-        """Uses kwargs to pre-populate namespace of the `Parser`."""
+    def __init__(self, parser_name=None, **kwargs):
+        """Uses kwargs to pre-populate namespace of the `Parser`.
+
+        Args:
+            parser_name: a name used for identification of sub-parser
+        """
         self.namespace = argparse.Namespace()
+        self.parser_name = parser_name
         self.parser = argparse.ArgumentParser(description=self.description, epilog=self.epilog)
 
         self.arguments = {}
@@ -229,6 +234,11 @@ class Parser:
         custom implementation of parse_known_args (which really builds upon
         the built-in one, just tweaking some places).
         """
+        # regenerate description and epilog: enables use of custom variables
+        # (which may be not yet populated at init.) in descriptions epilogues
+        self.parser.description = self.description
+        self.parser.epilog = self.epilog
+
         native_sub_parser = self.parser.add_subparsers()
 
         for name, sub_parser in self.all_subparsers.items():
@@ -250,7 +260,7 @@ class Parser:
         parser = deepcopy(parser)
         # and we want to use only this instance of the parser
         setattr(self, name, parser)
-        parser.name = name
+        parser.parser_name = name
         self.subparsers[name] = parser
         if parser.pull_to_namespace_above:
             self.lifted_args.update(parser.arguments)

@@ -2,7 +2,7 @@ from pytest import fixture, raises
 from test_command_line.utilities import parsing_output
 from test_command_line.utilities import parse
 
-from command_line.main import SingleFileExperimentFactory
+from command_line.main import SingleFileExperimentFactory, CLI
 from methods import Method
 from models import Sample
 
@@ -244,6 +244,9 @@ def test_general_help(capsys):
     for method in Method.members:
         assert method in text.std
 
+
+def test_shows_usage_when_no_args(capsys):
+
     # if there are no arguments provided, the parser should
     # show the usage summary (and do not raise any errors)
     with parsing_output(capsys) as text:
@@ -253,6 +256,16 @@ def test_general_help(capsys):
 
 
 def test_sub_parsers_help(capsys):
+    # do we get the `name` substitution right?
+    SingleFileExperimentFactory.__doc__ = 'Description of {parser_name}'
+    cli = CLI()
+    assert cli.all_subparsers['data'].parser_name == 'data'
+
+    with parsing_output(capsys) as text:
+        parse('data --help')
+
+    assert 'Description of data' in text.std
+
     # is custom sub-parser screen displayed and description used included in it?
     SingleFileExperimentFactory.description = 'A dummy description'
     SingleFileExperimentFactory.epilog = 'A dummy epilog'
