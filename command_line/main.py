@@ -11,7 +11,7 @@ from .method_parser import MethodParser
 class PhenotypeFactory(Parser):
     """Provide {parser_name} samples. Requires a file (or files) with samples.
 
-     The files should come in Delimiter Separate Values format
+     The files should come in Delimiter Separated Values format
      (like .csv or .tsv). The default delimiter is a tab character.
      First column of each file should contain gene identifiers.
 
