@@ -232,7 +232,7 @@ class CLI(Parser):
 
         return method_parser
 
-    def parse(self, args):
+    def parse_args(self, args):
         help_args = {'-h', '--help'}
 
         if help_args.intersection(args):
@@ -260,9 +260,9 @@ class CLI(Parser):
                 all_subparsers = [methods, self.subparsers, self.lifted_parsers]
 
                 for parser in filter(bool, map(match_parser, all_subparsers)):
-                    return parser.parse(args_without_help[1:] + ['-h'])
+                    return parser.parse_args(args_without_help[1:] + ['-h'])
 
-        return super().parse(args)
+        return super().parse_args(args)
 
     def produce(self, unknown_args):
         options = self.namespace

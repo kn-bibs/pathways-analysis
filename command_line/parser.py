@@ -2,6 +2,9 @@ import argparse
 import textwrap
 from collections import defaultdict
 from copy import deepcopy
+from typing import Sequence
+
+import sys
 
 
 def group_arguments(args, group_names):
@@ -129,7 +132,7 @@ class Parser:
         # The commands will usually be `sys.argv[1:]`
         commands = '--my_argument 4 my_sub_parser value'.split()
 
-        namespace = parser.parse(commands)
+        namespace = parser.parse_args(commands)
 
         # `namespace` is a normal `argparse.Namespace`
         assert namespace.my_argument == 4
@@ -196,7 +199,7 @@ class Parser:
 
         attribute_handlers = {
             Argument: self.bind_argument,
-            Parser: self.add_parser,
+            Parser: self.bind_parser,
         }
 
         # register class attributes
@@ -226,16 +229,17 @@ class Parser:
 
     def to_builtin_parser(self):
         for argument in self.all_arguments.values():
-            self.add_argument(argument)
+            self.attach_argument(argument)
 
-    def add_argument(self, argument, parser=None):
+    def attach_argument(self, argument: Argument, parser=None):
+        """Attach Argument instance to given (or own) argparse.parser."""
         if not parser:
             parser = self.parser
 
         parser.add_argument(*argument.args, **argument.kwargs)
 
     def attach_subparsers(self):
-        """Only in order to show a nice help, really
+        """Only in order to show a nice help, really.
 
         There are some issues when using subparsers added with the built-in
         add_subparsers for parsing. Instead subparsers are handled in a
@@ -260,29 +264,52 @@ class Parser:
             )
 
             for argument in sub_parser.arguments.values():
-                self.add_argument(argument, parser)
+                self.attach_argument(argument, parser)
 
-    def add_parser(self, parser, name):
-        # copy is needed as we do not want to share the class-method
-        # stored data across all instances
+    def bind_parser(self, parser: 'Parser', name):
+        """Bind deep-copy of Parser with this instance (as a sub-parser).
+
+        Args:
+            parser:
+                parser to be bound as a sub-parser
+                (must be already initialized)
+            name:
+                name of the new sub-parser
+
+        This method takes care of 'translucent' sub-parsers (i.e. parsers
+        which expose their arguments and sub-parsers to namespace above),
+        saving their members to appropriate dicts (lifted_args/parsers).
+        """
+        # Copy is needed as we do not want to share values of parsers'
+        # arguments across separate instances of parsers (which is the
+        # default behaviour when using class-properties).
         parser = deepcopy(parser)
-        # and we want to use only this instance of the parser
+
+        # For easier access, and to make sure that we will not access
+        # the "raw" (not deep-copied) instance of parser again.
         setattr(self, name, parser)
+
         parser.parser_name = name
         self.subparsers[name] = parser
+
         if parser.pull_to_namespace_above:
             self.lifted_args.update(parser.arguments)
             self.lifted_parsers.update(parser.subparsers)
 
-    def __deepcopy__(self, memodict={}):
-        return self.__class__(**self.kwargs)
-
-    def bind_argument(self, argument, name=None):
+    def bind_argument(self, argument: Argument, name=None):
+        """Bind argument to current instance of Parser."""
         if not argument.name and name:
             argument.name = name
         self.arguments[name] = argument
 
-    def parse_known_args(self, args):
+    def parse_known_args(self, args: Sequence[str]):
+        """Parse known arguments (like argparse.parse_known_args).
+
+        Additional features (when compared to argparse implementation) are:
+            - ability to handle multiple sub-parsers
+            - validation with `self.validate` (run after parsing)
+            - additional post-processing with `self.produce` (after validation)
+        """
         grouped_args, ungrouped_args = group_arguments(args, self.all_subparsers)
 
         for name, parser in self.subparsers.items():
@@ -325,6 +352,12 @@ class Parser:
         return self.namespace, unknown_args
 
     def validate(self, opts):
+        """Perform additional validation, using `Argument.validate`.
+
+        As validation is performed after parsing, all arguments should
+        be already accessible in `self.namespace`. This enables testing
+        if arguments depending one on another have proper values.
+        """
         if not opts:
             opts = self.namespace
         for argument in self.all_arguments.values():
@@ -332,6 +365,18 @@ class Parser:
 
     @property
     def pull_to_namespace_above(self):
+        """Makes the parser "translucent" for the end user.
+
+        Though parsing methods (as well as validate & produce)
+        are still evaluated, the user won't be able to see this
+        sub-parser in command-line interface.
+
+        This is intended to provide additional logic separation
+        layer & to keep the parsers nicely organized and nested,
+        without forcing the end user to type in prolonged names
+        to localise an argument in a sub-parser of a sub-parser
+        of some other parser.
+        """
         return False
 
     def produce(self, unknown_args):
@@ -353,7 +398,19 @@ class Parser:
         """
         return self.namespace
 
-    def parse(self, args):
+    def parse_args(self, args: Sequence[str] = None):
+        """Same as `parse_known_args` but all arguments must be parsed.
+
+        This is an equivalent of `ArgumentParser.parse_args` although
+        it does >not< support `namespace` keyword argument.
+
+        Comparing to `Parser.parse_known_args`, this method handles
+        help messages nicely (i.e. passes everything to argparse).
+
+        Args:
+            args: strings to parse, default is sys.argv[1:]
+        """
+        args = args if args is not None else sys.argv[1:]
 
         # Use the built-in help (just attach sub-parsers before).
         if '-h' in args or '--help' in args or not args:
@@ -367,3 +424,5 @@ class Parser:
 
         return options
 
+    def __deepcopy__(self, memodict={}):
+        return self.__class__(**self.kwargs)

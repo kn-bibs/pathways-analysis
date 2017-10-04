@@ -26,4 +26,4 @@ def parse(command_line):
         Namespace with parsed arguments
     """
     commands = command_line.split(' ') if command_line else []
-    return CLI().parse(commands)
+    return CLI().parse_args(commands)

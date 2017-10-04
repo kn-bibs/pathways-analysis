@@ -4,7 +4,7 @@ from command_line import CLI
 
 
 def run(argv):
-    args = CLI().parse(argv[1:])
+    args = CLI().parse_args(argv[1:])
     return args.method.run(args.experiment)
 
 
