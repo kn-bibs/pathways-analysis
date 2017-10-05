@@ -59,6 +59,12 @@ class Argument:
         self.kwargs = kwargs
         self.default = kwargs.get('default', None)
 
+        if not optional and short:
+            raise ValueError(
+                f'Keyword argument `short={short}` is useless '
+                f'for an optional argument named "{name}".'
+            )
+
     @property
     def args(self):
 

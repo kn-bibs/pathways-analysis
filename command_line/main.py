@@ -218,7 +218,7 @@ class CLIExperiment(Parser):
 class CLI(Parser):
     """The main parser, the one exposed directly to the user."""
 
-    method_name = Argument(choices=Method.members, name='method', short='m', optional=False)
+    method_name = Argument(choices=Method.members, name='method', optional=False)
     experiment = CLIExperiment()
 
     @staticmethod
