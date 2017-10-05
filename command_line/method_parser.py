@@ -55,7 +55,7 @@ def is_set(value):
 
 
 def empty_to_none(value):
-    if value == inspect._empty:
+    if not is_set(value):
         return None
     return value
 

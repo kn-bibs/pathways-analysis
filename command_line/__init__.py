@@ -1,4 +1,4 @@
-"""These package provides Command Line Interface (CLI) implementation.
+"""This package provides Command Line Interface (CLI) implementation.
 
 If you wish to streamline the CLI or add a new switch or argument,
 please go straight to `main.py` module. Helper type definitions

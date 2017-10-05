@@ -87,7 +87,7 @@ class PhenotypeFactory(Parser):
 
             for i, file_obj in enumerate(opts.files):
 
-                use_header = type(opts.header[i]) is int
+                use_header = isinstance(opts.header[i], int)
 
                 sample_collections.append(
                     Phenotype.from_file(
@@ -118,7 +118,7 @@ class SingleFileExperimentFactory(Parser):
     assumed that all other columns should be used for the other
     set of samples (if you use `--case 0,1,2` and your file has
     five columns with samples, then columns three and four will
-    be used to create control samples.
+    be used to create control samples).
 
     To enable more advanced features, please use `control`&`case`
     options (instead of the currently selected `data` sub-parser).
