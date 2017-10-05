@@ -1,10 +1,11 @@
+import pytest
 from pytest import fixture
 from test_command_line.utilities import parsing_output
 from test_command_line.utilities import parse
 
 from command_line.main import SingleFileExperimentFactory, CLI
 from methods import Method
-from models import Sample
+from models import Sample, Gene
 from tests.test_command_line.utilities import parsing_error
 
 
@@ -177,6 +178,36 @@ def test_non_tab_delimiter(tmpdir):
 
     assert opts.control.phenotype.samples == expected_controls
     assert opts.case.phenotype.samples == expected_cases
+
+
+def test_file_with_description(test_files, tmpdir):
+
+    create_files(tmpdir, {
+        'control_with_descriptions.tsv': (
+            'Gene	Description	Control_1	Control_2',
+            'TP53	Tumour protein 53	6	6',
+            'BRCA2	Breast cancer type 2 s. protein	6	7',
+        )
+    })
+
+    expected_warning = (
+        'First line of your file contains "description" column '
+        'but you did not provide "--description_column" argument.'
+    )
+
+    # user forgot
+    with pytest.warns(UserWarning, match=expected_warning):
+        opts = p_parse('case t.tsv control control_with_descriptions.tsv')
+        assert len(opts.control.phenotype.samples) == 3
+
+    # user remembered
+    opts = p_parse('case t.tsv control control_with_descriptions.tsv -d 1')
+    assert len(opts.control.phenotype.samples) == 2
+
+    assert set(opts.control.phenotype.samples[0].genes) == {
+        Gene('TP53', description='Tumour protein 53'),
+        Gene('BRCA2', description='Breast cancer type 2 s. protein')
+    }
 
 
 def test_custom_sample_names(test_files):

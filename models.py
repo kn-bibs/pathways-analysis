@@ -14,8 +14,9 @@ class Gene:
             cls.instances[name] = super(Gene, cls).__new__(cls, *args, **kwargs)
         return cls.instances[name]
 
-    def __init__(self, name):
+    def __init__(self, name, description=None):
         self.name = name
+        self.description = description
 
 
 class Sample:
@@ -23,6 +24,10 @@ class Sample:
     def __init__(self, name, data: Mapping[Gene, float]):
         self.name = name
         self.data = data
+
+    @property
+    def genes(self):
+        return self.data.keys()
 
     @classmethod
     def from_names(cls, name, data: Mapping[str, float]):
@@ -35,7 +40,7 @@ class Sample:
         return cls(name, {Gene(gene_name): value for gene_name, value in data.items()})
 
     @classmethod
-    def from_array(cls, name, panda_series: pd.Series):
+    def from_array(cls, name, panda_series: pd.Series, descriptions=False):
         """Create a sample from pd.Series or equivalent.
 
         Side effects:
@@ -44,10 +49,21 @@ class Sample:
 
         Args:
             name: name of sample
-            panda_series: series object where columns represent gene names
+            panda_series:
+                series object where columns represent values of genes and
+                names are either gene identifiers of tuples:
+                `(gene_identifier, description)`
+            descriptions: are description present in names of series object?
         """
-        panda_series = panda_series.rename(lambda gene_name: Gene(gene_name))
-        return cls(name, panda_series.to_dict())
+        gene_maker = Gene
+
+        if descriptions:
+            gene_maker = lambda data: Gene(*data)
+
+        return cls(name, {
+            gene_maker(key): value
+            for key, value in panda_series.to_dict().items()
+        })
 
     def as_array(self):
         """
@@ -113,7 +129,7 @@ class Phenotype:
             columns_selector: Callable[[Sequence[int]], Sequence[int]]=None,
             samples=None, delimiter: str='\t', index_col: int=0,
             use_header=True, reverse_selection=False, prefix=None,
-            header_line=0
+            header_line=0, description_column=None
     ):
         """Create a phenotype (collection of samples) from csv/tsv file.
 
@@ -123,8 +139,14 @@ class Phenotype:
                 identify it (like "Tumour_1" or "Control_in_20_degrees")
 
             file_object: a file containing gene expression of the following structure:
-                - names of samples separated by tab in first row
-                - gene symbol/name followed by gene expression values for every sample in remaining rows
+                - names of samples separated by tab in first row,
+                - gene symbol/name followed by gene expression values
+                  for every sample in remaining rows;
+
+                an additional column "description" is allowed between genes
+                column and sample columns, though it has to be explicitly
+                declared with `description_column` argument.
+
 
             columns_selector:
                 a function which will select (and return) a subset of
@@ -143,32 +165,45 @@ class Phenotype:
             use_header: does the file has header?
             prefix: prefix for custom samples naming schema
             header_line: number of non-empty line with sample names
+            description_column: index of column with description of genes
         """
         if file_object.tell() != 0:
             warn(f'Passed file object: {file_object} was read before.')
             raise Exception()
 
         line = first_line(file_object)
+        header_items = [item.strip() for item in line.split('\t')]
+        gene_columns = [index_col]
+
+        if description_column:
+            gene_columns.append(description_column)
+        else:
+            if any('description' == name.lower() for name in header_items):
+                warn(
+                    'First line of your file contains "description" column, '
+                    'but you did not provide "--description_column" argument.'
+                )
+
+        # a reasonable assumption is that the columns with samples
+        # start after columns with gene symbol and gene description
+        column_shift = max(gene_columns) + 1
 
         if columns_selector:
             # sniff how many columns do we have in the file
             columns_count = line.count(delimiter)
 
-            # meaningful columns start after the gene column
-            shift = index_col + 1
-
-            all_columns = list(range(shift, columns_count + shift))
+            all_sample_columns = list(range(column_shift, columns_count + column_shift))
 
             # generate identifiers (numbers) for all columns
             # and take the requested subset
-            columns = columns_selector(all_columns)
+            columns = columns_selector(all_sample_columns)
 
             if reverse_selection:
                 columns = list(columns)
-                columns = [c for c in all_columns if c not in columns]
+                columns = [c for c in all_sample_columns if c not in columns]
 
             # https://github.com/pandas-dev/pandas/issues/9098#issuecomment-333677100
-            columns = [index_col] + list(columns)
+            columns = gene_columns + list(columns)
         else:
             columns = None
 
@@ -191,11 +226,9 @@ class Phenotype:
         # user where exactly the problem occurs.
         if samples:
 
-            header_items = line.split('\t')
-
             available_samples = [
-                name.strip()
-                for name in header_items[index_col + 1:]
+                name
+                for name in header_items[column_shift:]
             ]
 
             lacking_samples = set(samples) - set(available_samples)
@@ -215,8 +248,13 @@ class Phenotype:
                     'for pandas in versions older than 0.21.'
                 )
 
+            additional_column_names = [
+                header_items[index]
+                for index in gene_columns
+            ]
+
             # https://github.com/pandas-dev/pandas/issues/9098#issuecomment-333677100
-            samples = [header_items[index_col].strip()] + list(samples)
+            samples = additional_column_names + list(samples)
 
         # just to reassure that the pointer is on the beginning
         if file_object.tell() != 0:
@@ -233,13 +271,15 @@ class Phenotype:
             delimiter=delimiter,
             # None - do not use, 0 - use first row
             header=header_line if use_header else None,
-            index_col=index_col,
+            index_col=gene_columns,
             usecols=columns or samples,
             prefix=f'{prefix}_' if prefix else ''
         )
 
+        descriptions = description_column is not None
+
         samples = [
-            Sample.from_array(sample_name, sample_data)
+            Sample.from_array(sample_name, sample_data, descriptions=descriptions)
             for sample_name, sample_data in data.items()
         ]
 

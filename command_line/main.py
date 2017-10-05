@@ -4,7 +4,7 @@ from methods import Method
 from models import Phenotype, Experiment
 
 from .parser import Parser, Argument
-from .types import Slice, one_of, Indices, dsv, Range
+from .types import Slice, one_of, Indices, dsv, Range, positive_int
 from .method_parser import MethodParser
 
 
@@ -56,7 +56,6 @@ class PhenotypeFactory(Parser):
         help='Delimiter of the provided file(s). Default: tabulation mark.'
     )
 
-    # TODO: do we usually have sample names in headers (the default assumes that we have)
     header = Argument(
         nargs='*',
         type=one_of(int, str),
@@ -72,6 +71,14 @@ class PhenotypeFactory(Parser):
              'all relevant samples like: cancer_1, cancer_2, etc. '
              'Default: create sample names from first non-empty '
              'line in the file.'
+    )
+
+    description_column = Argument(
+        short='d',
+        type=positive_int,
+        help='Index of column with descriptions of genes (>=1)'
+             'By default it is assumed that there is no '
+             'column with descriptions.'
     )
 
     def produce(self, unknown_args=None):
@@ -99,7 +106,8 @@ class PhenotypeFactory(Parser):
                         delimiter=opts.delimiter,
                         header_line=opts.header[i] if use_header else None,
                         use_header=use_header,
-                        prefix=opts.header[i] if not use_header else None
+                        prefix=opts.header[i] if not use_header else None,
+                        description_column=opts.description_column
                     )
                 )
 
