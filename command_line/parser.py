@@ -341,7 +341,8 @@ class Parser:
                     setattr(self.namespace, name, None)
                     not_parsed_args = None
 
-            assert not not_parsed_args
+            if not_parsed_args:
+                parser.error(f'unrecognized arguments: {" ".join(not_parsed_args)}')
 
         namespace, unknown_args = self.parser.parse_known_args(
             ungrouped_args,
@@ -349,10 +350,12 @@ class Parser:
         )
         assert namespace is self.namespace
 
-        # TODO: make validation (and production) errors raise in parser context
-        self.validate(self.namespace)
+        try:
+            self.validate(self.namespace)
+            opts = self.produce(unknown_args)
+        except (ValueError, TypeError, argparse.ArgumentTypeError) as e:
+            self.error(e.args[0])
 
-        opts = self.produce(unknown_args)
         assert opts is self.namespace
 
         return self.namespace, unknown_args
@@ -404,6 +407,11 @@ class Parser:
         """
         return self.namespace
 
+    def error(self, message):
+        """Raises SystemExit with status code 2 and shows usage message."""
+        self.attach_subparsers()
+        self.parser.error(message)
+
     def parse_args(self, args: Sequence[str] = None):
         """Same as `parse_known_args` but all arguments must be parsed.
 
@@ -426,7 +434,9 @@ class Parser:
         # Parse wisely, we need to support chaining sub-parsers,
         # validation and so on. Everything in parse_known_args.
         options, unknown_args = self.parse_known_args(args)
-        assert not unknown_args
+
+        if unknown_args:
+            self.error(f'unrecognized arguments: {" ".join(unknown_args)}')
 
         return options
 

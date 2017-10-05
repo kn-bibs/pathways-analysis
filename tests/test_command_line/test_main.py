@@ -1,10 +1,11 @@
-from pytest import fixture, raises
+from pytest import fixture
 from test_command_line.utilities import parsing_output
 from test_command_line.utilities import parse
 
 from command_line.main import SingleFileExperimentFactory, CLI
 from methods import Method
 from models import Sample
+from tests.test_command_line.utilities import parsing_error
 
 
 def make_samples(samples_dict):
@@ -95,7 +96,7 @@ def test_simple_files_loading(test_files):
     opts = p_parse('control c.tsv case t.tsv t_2.tsv')
     assert len(opts.case.phenotype.samples) == 4
 
-    with raises(ValueError, match='Neither data nor \(case & control\) have been provided!'):
+    with parsing_error(match='Neither data nor \(case & control\) have been provided!'):
         p_parse('')
 
 
@@ -130,14 +131,14 @@ def test_select_samples(test_files):
         "Following samples were found: Tumour_1, Tumour_2."
     )
 
-    with raises(ValueError, match=expected_message):
+    with parsing_error(match=expected_message):
         p_parse('case t.tsv --samples Control_1 control c.tsv')
 
-    with raises(ValueError, match='columns for 2 files provided, expected for 1'):
+    with parsing_error(match='columns for 2 files provided, expected for 1'):
         # the user should use --columns 0,1 instead
         p_parse('control c.tsv case t.tsv --columns 0 1')
 
-    with raises(ValueError, match='columns for 1 files provided, expected for 2'):
+    with parsing_error(match='columns for 1 files provided, expected for 2'):
         p_parse('control c.tsv case t.tsv t_2.tsv --columns 1')
 
 
@@ -229,10 +230,10 @@ def test_merged_file(test_files):
         assert opts.control.phenotype.samples == expected_controls
         assert opts.case.phenotype.samples == expected_cases
 
-    with raises(ValueError, match='Neither --case nor --control provided'):
+    with parsing_error(match='Neither --case nor --control provided'):
         p_parse('data merged.tsv')
 
-    with raises(ValueError, match='Cannot handle data and case/control at once'):
+    with parsing_error(match='Cannot handle data and case/control at once'):
         p_parse('data merged.tsv --case 1 --control 2 control c.tsv')
 
 
@@ -243,6 +244,9 @@ def test_general_help(capsys):
 
     for method in Method.members:
         assert method in text.std
+
+    with parsing_error(match='unrecognized arguments: --controll'):
+        p_parse('data merged.tsv --case 1 --controll 2 control c.tsv')
 
 
 def test_shows_usage_when_no_args(capsys):

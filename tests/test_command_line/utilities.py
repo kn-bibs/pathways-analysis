@@ -1,5 +1,6 @@
 from argparse import Namespace
-from contextlib import contextmanager
+from contextlib import contextmanager, redirect_stderr
+from io import StringIO
 
 import pytest
 
@@ -27,3 +28,20 @@ def parse(command_line):
     """
     commands = command_line.split(' ') if command_line else []
     return CLI().parse_args(commands)
+
+
+class ParsingError(Exception):
+    pass
+
+
+@contextmanager
+def parsing_error(match=None):
+    error_file = StringIO()
+    with redirect_stderr(error_file):
+        with pytest.raises(ParsingError, match=match):
+            try:
+                yield
+            except SystemExit as exit_exception:
+                if exit_exception.code == 2:
+                    usage_and_error_msg = error_file.getvalue()
+                    raise ParsingError(usage_and_error_msg)
