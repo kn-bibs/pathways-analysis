@@ -48,12 +48,13 @@ class Sample:
             it will be stored in the new `Sample` object.
 
         Args:
-            name: name of sample
+            name: name of the sample
             panda_series:
                 series object where columns represent values of genes and
                 names are either gene identifiers of tuples:
                 `(gene_identifier, description)`
-            descriptions: are description present in names of series object?
+            descriptions:
+                are descriptions present in names of the series object?
         """
         gene_maker = Gene
 
@@ -139,7 +140,7 @@ class Phenotype:
                 identify it (like "Tumour_1" or "Control_in_20_degrees")
 
             file_object: a file containing gene expression of the following structure:
-                - names of samples separated by tab in first row,
+                - names of samples separated by a tab in the first row,
                 - gene symbol/name followed by gene expression values
                   for every sample in remaining rows;
 
@@ -153,7 +154,7 @@ class Phenotype:
                 provided column identifiers (do not use with `samples`)
 
             samples:
-                a list of names of samples to extract from file
+                a list of names of samples to extract from the file
                 (do not use with `columns_selector`)
 
             reverse_selection:
@@ -162,7 +163,7 @@ class Phenotype:
 
             delimiter: the delimiter of the columns
             index_col: column to use as the gene names
-            use_header: does the file has header?
+            use_header: does the file have a header?
             prefix: prefix for custom samples naming schema
             header_line: number of non-empty line with sample names
             description_column: index of column with description of genes
@@ -211,7 +212,7 @@ class Phenotype:
             if samples:
                 raise ValueError(
                     'To select samples by their name, you need a file with '
-                    'samples names in header. If you use such file, '
+                    'samples names in the header. If you use such file, '
                     'please set `use_header=True`, otherwise skip `samples` '
                     'in your arguments.'
                 )

@@ -22,10 +22,10 @@ def group_arguments(args, group_names):
 class Argument:
     """Defines argument for `Parser`.
 
-    In essence this is a wrapper for `argparse.add_argument()`,
-    so most options (type, help) which work in standard python
-    parser will work with Argument too. Additionally some nice
-    feature, like automated naming are available.
+    In essence, this is a wrapper for `argparse.add_argument()`,
+    so most options (type, help) which work in standard Python
+    parser will work with Argument too. Additionally, some nice
+    features, like automated naming are available.
 
     Worth to mention that when used with `MethodParser`,
     `type` and `help` will be automatically deduced.

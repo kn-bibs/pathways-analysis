@@ -13,7 +13,7 @@ class PhenotypeFactory(Parser):
 
      The files should come in Delimiter Separated Values format
      (like .csv or .tsv). The default delimiter is a tab character.
-     First column of each file should contain gene identifiers.
+     The first column of each file should contain gene identifiers.
 
      To use only a subset of samples from files(s) specify column numbers
      (--columns) or sample names (--samples) of desired samples.
@@ -34,7 +34,7 @@ class PhenotypeFactory(Parser):
         as_many_as=files,
         help='Names of samples (columns) to be extracted from the file. '
              'Sample names are determined from the first non-empty row. '
-             'Use comma to separate samples. '
+             'Use a comma to separate samples. '
              'Samples for each of files should be separated by space.'
     )
 
@@ -77,7 +77,7 @@ class PhenotypeFactory(Parser):
         short='d',
         type=positive_int,
         help='Index of column with descriptions of genes (>=1)'
-             'By default it is assumed that there is no '
+             'By default, it is assumed that there is no '
              'column with descriptions.'
     )
 
@@ -177,7 +177,7 @@ class SingleFileExperimentFactory(Parser):
                     raise ValueError(
                         'Neither --case nor --control provided: '
                         'please specify which columns should be used as control '
-                        'and which should be used as case.'
+                        'and which should be used as the case.'
                     )
 
             phenotypes = {'control': produce_phenotype('control', 'case')}

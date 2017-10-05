@@ -8,8 +8,8 @@ from command_line.parser import Parser, Argument
 def analyze_docstring(docstring: str):
     """Analyze docstring and collect arguments with descriptions.
 
-    All arguments have to start with lowercase, be followed with
-    colon (:) and description of the argument.
+    All arguments have to start with a lowercase letter, be followed
+    with a colon (:) and then with the description of the argument.
     """
     help_strings = defaultdict(list)
     collect_help = False
