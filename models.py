@@ -166,7 +166,9 @@ class Phenotype:
             use_header: does the file have a header?
             prefix: prefix for custom samples naming schema
             header_line: number of non-empty line with sample names
-            description_column: index of column with description of genes
+            description_column:
+                is column with description of present in the file
+                (on the second position, after gene identifiers)?
         """
         if file_object.tell() != 0:
             warn(f'Passed file object: {file_object} was read before.')
@@ -177,6 +179,7 @@ class Phenotype:
         gene_columns = [index_col]
 
         if description_column:
+            description_column = 1
             gene_columns.append(description_column)
         else:
             if any('description' == name.lower() for name in header_items):

@@ -4,7 +4,7 @@ from methods import Method
 from models import Phenotype, Experiment
 
 from .parser import Parser, Argument
-from .types import Slice, one_of, Indices, dsv, Range, positive_int
+from .types import Slice, one_of, Indices, dsv, Range
 from .method_parser import MethodParser
 
 
@@ -75,10 +75,11 @@ class PhenotypeFactory(Parser):
 
     description_column = Argument(
         short='d',
-        type=positive_int,
-        help='Index of column with descriptions of genes (>=1)'
-             'By default, it is assumed that there is no '
-             'column with descriptions.'
+        action='store_true',
+        help='Enable this switch, if there is a column with columns '
+             'descriptions (the column has to be on position two, '
+             'i.e. immediately after gene identifiers). By default '
+             'it is assumed that there is no such column.'
     )
 
     def produce(self, unknown_args=None):
@@ -213,6 +214,10 @@ class CLIExperiment(Parser):
         elif opts.case and opts.control:
             # that's nice :)
             pass
+        elif opts.case:
+            raise ValueError('Control has not been provided!')
+        elif opts.control:
+            raise ValueError('Case has not been provided!')
         else:
             raise ValueError('Neither data nor (case & control) have been provided!')
 

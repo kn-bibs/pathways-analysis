@@ -44,12 +44,17 @@ class Method(metaclass=AbstractRegisteringType):
 
     @abstract_property
     def help(self):
-        """Return string providing help for this method."""
+        """Return string providing help for this method.
+
+        The help message shows up when `./run method_name -h`.
+        """
         pass
 
     @abstract_property
     def name(self):
-        """Return method name used internally and in command line interface."""
+        """Return method name used internally and in command line interface.
+
+        The name should not include any spaces."""
         pass
 
     @abstractmethod

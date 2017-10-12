@@ -100,6 +100,11 @@ def test_simple_files_loading(test_files):
     with parsing_error(match='Neither data nor \(case & control\) have been provided!'):
         p_parse('')
 
+    phenotypes = {'case': 'Control', 'control': 'Case'}
+    for phenotype, name in phenotypes.items():
+        with parsing_error(match=f'{name} has not been provided!'):
+            p_parse(f'{phenotype} c.tsv')
+
 
 def test_select_samples(test_files):
 
@@ -201,7 +206,7 @@ def test_file_with_description(test_files, tmpdir):
         assert len(opts.control.phenotype.samples) == 3
 
     # user remembered
-    opts = p_parse('case t.tsv control control_with_descriptions.tsv -d 1')
+    opts = p_parse('case t.tsv control control_with_descriptions.tsv -d')
     assert len(opts.control.phenotype.samples) == 2
 
     assert set(opts.control.phenotype.samples[0].genes) == {
