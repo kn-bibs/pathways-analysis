@@ -1,3 +1,5 @@
+sphinx
+sphinx-autodoc-typehints
 pytest
 pandas
 numpy

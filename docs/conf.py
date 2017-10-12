@@ -20,7 +20,6 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
-print(sys.path)
 
 
 # -- General configuration ------------------------------------------------
@@ -32,11 +31,18 @@ print(sys.path)
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc',
+extensions = [
+    'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
-    'sphinx.ext.viewcode']
+    'sphinx.ext.viewcode',
+    'sphinx.ext.napoleon',
+    'sphinx_autodoc_annotation',
+    'sphinx_autodoc_typehints'
+]
+
+add_module_names = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -94,7 +100,13 @@ html_theme = 'alabaster'
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    'github_button': True,
+    'github_user': 'kn-bibs',
+    'github_repo': 'pathways-analysis',
+    'github_type': 'star',
+    'travis_button': True,
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -174,7 +186,7 @@ texinfo_documents = [
 ]
 
 
-
-
-# Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3.6', None),
+    'pandas': ('https://pandas.pydata.org/pandas-docs/stable/', None)
+}
