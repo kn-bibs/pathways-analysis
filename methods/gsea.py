@@ -1,7 +1,10 @@
+from models import Experiment
 from .method import Method
 
 
+# TODO: do not use help, use docstring instead
 class GSEA(Method):
+    """Not finished yet."""
 
     name = 'gsea'
 
@@ -16,5 +19,5 @@ class GSEA(Method):
     def __init__(self):
         pass
 
-    def run(self, experiment):
+    def run(self, experiment: Experiment):
         pass

@@ -6,6 +6,19 @@ import pandas as pd
 
 
 class Gene:
+    """Stores gene's identifier and description (multiton).
+
+    At a time there can be only one gene with given identifier,
+    i.e. after the first initialization, all subsequent attempts
+    to initialize a gene with the same identifier will return
+    exactly the same object. This is so called multiton pattern.
+
+    Example:
+
+        >>> x = Gene('TP53')
+        >>> y = Gene('TP53')
+        >>> assert x is y   # passes, there is only one gene
+    """
 
     instances = {}
 
@@ -20,6 +33,7 @@ class Gene:
 
 
 class Sample:
+    """Sample contains expression values for genes."""
 
     def __init__(self, name, data: Mapping[Gene, float]):
         self.name = name
@@ -43,16 +57,12 @@ class Sample:
     def from_array(cls, name, panda_series: pd.Series, descriptions=False):
         """Create a sample from pd.Series or equivalent.
 
-        Side effects:
-            `panda_series` will be renamed and a reference to
-            it will be stored in the new `Sample` object.
-
         Args:
             name: name of the sample
             panda_series:
                 series object where columns represent values of genes and
                 names are either gene identifiers of tuples:
-                `(gene_identifier, description)`
+                ``(gene_identifier, description)``
             descriptions:
                 are descriptions present in names of the series object?
         """
@@ -115,9 +125,7 @@ class Phenotype:
 
     def as_array(self):
         """
-
-        Returns: pandas DataFrame object for all samples, which can be passed to ttest_ind
-
+        Returns: :class:`pandas.DataFrame` object with data for all samples.
         """
         return {s.name: pd.DataFrame(s) for s in self.samples}
 
@@ -139,15 +147,15 @@ class Phenotype:
                 a name of the phenotype (or group of samples) which will
                 identify it (like "Tumour_1" or "Control_in_20_degrees")
 
-            file_object: a file containing gene expression of the following structure:
-                - names of samples separated by a tab in the first row,
-                - gene symbol/name followed by gene expression values
-                  for every sample in remaining rows;
+            file_object: a file (containing gene expression)
+                of the following structure:
+                    - names of samples separated by a tab in the first row,
+                    - gene symbol/name followed by gene expression values
+                      for every sample in remaining rows;
 
                 an additional column "description" is allowed between genes
                 column and sample columns, though it has to be explicitly
                 declared with `description_column` argument.
-
 
             columns_selector:
                 a function which will select (and return) a subset of
@@ -162,10 +170,15 @@ class Phenotype:
                 (or all samples but the selected) set this to True
 
             delimiter: the delimiter of the columns
+
             index_col: column to use as the gene names
+
             use_header: does the file have a header?
+
             prefix: prefix for custom samples naming schema
+
             header_line: number of non-empty line with sample names
+
             description_column:
                 is column with description of present in the file
                 (on the second position, after gene identifiers)?
