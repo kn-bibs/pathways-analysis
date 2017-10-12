@@ -10,6 +10,11 @@ Welcome to Pathway Analysis's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   command_line
+   methods
+   models
+   stats
+
 
 
 Indices and tables
