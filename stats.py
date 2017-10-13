@@ -1,15 +1,15 @@
-from models import Phenotype, Sample
+from models import SampleCollection, Sample
 import numpy as np
 from statsmodels.stats.weightstats import ttest_ind
 from typing import Union
 
 
-def ttest_ind_phenotype(case: Union[Phenotype, Sample], control: Union[Phenotype, Sample], alternative="two-sided"):
+def ttest_ind_phenotype(case: Union[SampleCollection, Sample], control: Union[SampleCollection, Sample], alternative="two-sided"):
     """
     Two sided t-test of case sample(s) and mean expression values in base samples across all genes
     Args:
-        case: either Sample of Phenotype object with case sample(s)
-        control: either Sample of Phenotype object with control sample(s)
+        case: either Sample of SampleCollection object with case sample(s)
+        control: either Sample of SampleCollection object with control sample(s)
         alternative: string with the alternative hypothesis, H1, has to be one of the following:
                     ‘two-sided’: H1: difference in means not equal to value (default)
                     ‘larger’ : H1: difference in means larger than value
