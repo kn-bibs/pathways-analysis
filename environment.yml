@@ -1,0 +1,12 @@
+name: patapy
+channels:
+ - conda-forge
+ - anaconda
+dependencies:
+ - pip:
+   - sphinx-autodoc-typehints
+   - sphinx-autodoc-annotation
+ - python=3.6
+ - pandas
+ - numpy
+ - statsmodels
