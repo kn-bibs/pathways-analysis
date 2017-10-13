@@ -6,10 +6,11 @@ from utils import AbstractRegisteringType, abstract_property
 class Method(metaclass=AbstractRegisteringType):
     """Defines method of pathway analysis & its arguments.
 
-    Simple arguments (like `threshold`) can be simply defined as
+    Simple arguments (like ``threshold``) can be simply defined as
     arguments and keyword arguments of `__init__`.
 
-    For example:
+    For example::
+
         class MyMethod(Method)
             def __init__(threshold:float=0.05):
                 pass
@@ -23,9 +24,10 @@ class Method(metaclass=AbstractRegisteringType):
 
     If you need more advanced options (like aggregation), or just do not
     like having a mess in your `__init__` signature, please define the
-    arguments in body of your class using `Argument` constructor.
+    arguments in body of your class using :class:`~command_line.parser.Argument` constructor.
 
-    For example:
+    For example::
+
         class MyMethod(Method):
 
             database = Argument(
@@ -36,10 +38,10 @@ class Method(metaclass=AbstractRegisteringType):
             def __init__(threshold:float=0.05, database=None):
                 pass
 
-    If help is given in both `Argument` and docstring, then the help from
-    `Argument()` takes precedence over the help in docstrings (as docstrings
-    should cover not only CLI usage but also describe how to use the method
-    as a standalone object - to enable advanced users to customize methods).
+    If help is given in both :class:`~command_line.parser.Argument` and docstring,
+    then the help from `Argument()` takes precedence over the help in docstrings
+    (as docstrings should cover not only CLI usage but also describe how to use
+    the method as a standalone object - to enable advanced users to customize methods).
     """
 
     @abstract_property

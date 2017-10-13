@@ -22,12 +22,12 @@ def group_arguments(args, group_names):
 class Argument:
     """Defines argument for `Parser`.
 
-    In essence, this is a wrapper for `argparse.add_argument()`,
+    In essence, this is a wrapper for :meth:`argparse.ArgumentParser.add_argument`,
     so most options (type, help) which work in standard Python
     parser will work with Argument too. Additionally, some nice
     features, like automated naming are available.
 
-    Worth to mention that when used with `MethodParser`,
+    Worth to mention that when used with :class:`~.command_line.method_parser.MethodParser`,
     `type` and `help` will be automatically deduced.
     """
 
@@ -105,7 +105,7 @@ def dedent_help(text):
 
 
 class Parser:
-    """Parser is a wrapper around Python built-in `argparse.ArgumentParser`.
+    """Parser is a wrapper around Python built-in :class:`argparse.ArgumentParser`.
 
     Subclass the `Parser` to create your own parser.
 
@@ -114,9 +114,9 @@ class Parser:
     and defined arguments.
 
     Attach custom arguments and sub-parsers by defining class-variables
-    with `Argument` and `Parser` instances.
+    with :class:`Argument` and :class:`Parser` instances.
 
-    Example:
+    Example::
 
         class TheParser(Parser):
             help = 'This takes only one argument, but it is required'
@@ -174,7 +174,7 @@ class Parser:
         """Longer description of the parser.
 
         Description is shown when user narrows down the help
-        to the parser with: `./run.py sub_parser_name -h`.
+        to the parser with: ``./run.py sub_parser_name -h``.
         """
         return (self.__doc__ or '').format(**vars(self))
 
@@ -309,7 +309,7 @@ class Parser:
         self.arguments[name] = argument
 
     def parse_known_args(self, args: Sequence[str]):
-        """Parse known arguments (like argparse.parse_known_args).
+        """Parse known arguments, like :meth:`argparse.ArgumentParser.parse_known_args`.
 
         Additional features (when compared to argparse implementation) are:
             - ability to handle multiple sub-parsers
@@ -413,13 +413,13 @@ class Parser:
         self.parser.error(message)
 
     def parse_args(self, args: Sequence[str] = None):
-        """Same as `parse_known_args` but all arguments must be parsed.
+        """Same as :meth:`parse_known_args` but all arguments must be parsed.
 
-        This is an equivalent of `ArgumentParser.parse_args` although
-        it does >not< support `namespace` keyword argument.
+        This is an equivalent of :meth:`argparse.ArgumentParser.parse_args`
+        although it does >not< support `namespace` keyword argument.
 
-        Comparing to `Parser.parse_known_args`, this method handles
-        help messages nicely (i.e. passes everything to argparse).
+        Comparing to :meth:`parse_known_args`, this method handles help
+        messages nicely (i.e. passes everything to :mod:`argparse`).
 
         Args:
             args: strings to parse, default is sys.argv[1:]
