@@ -15,9 +15,11 @@ def parsing_output(capsys, contains=None, does_not_contain=None):
         yield text
     text.std, text.err = capsys.readouterr()
     if contains:
-        assert contains in text.std
+        if contains not in text.std:
+            raise AssertionError(f'{contains} not in {text.std}')
     if does_not_contain:
-        assert does_not_contain not in text.std
+        if does_not_contain in text.std:
+            raise AssertionError(f'{does_not_contain} in {text.std}')
 
 
 def parse(command_line):

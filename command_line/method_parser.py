@@ -14,7 +14,7 @@ def analyze_docstring(docstring: str):
     help_strings = defaultdict(list)
     collect_help = False
     definition = re.compile(r'(?P<name>.+?):(?P<value>.*)')
-    args_sections = ['Arguments:', 'Ags:']
+    args_sections = ['Arguments:', 'Args:']
     empty_lines = 0
     argument = None
 
@@ -82,7 +82,7 @@ class MethodParser(Parser):
 
         # introspect method.__init__
         signature = inspect.signature(method)
-        docstring = method.__doc__ or ''
+        docstring = method.__init__.__doc__ or ''
 
         docstring_help = analyze_docstring(docstring)
 

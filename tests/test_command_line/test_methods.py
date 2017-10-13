@@ -69,6 +69,26 @@ def test_methods(capsys, test_files):
     with parsing_output(capsys, does_not_contain='Some important text help'):
         parse('--help')
 
+    # test arguments help
+    arguments_help = {
+        'This argument has to be passed!': True,
+        'Help and documentation for my_argument': True,
+        'Only integer numbers!': True,
+        # Following should not be shown, as it is overwritten by
+        # "integers-only" text above from Argument definition:
+        'Documentation for the other_argument': False
+    }
+
+    for text, is_expected in arguments_help.items():
+        contains, does_not_contain = None, None
+        if is_expected:
+            contains = text
+        else:
+            does_not_contain = text
+
+        with parsing_output(capsys, contains=contains, does_not_contain=does_not_contain):
+            parse('some_method -h')
+
 
 def test_analyze_docstring():
 
