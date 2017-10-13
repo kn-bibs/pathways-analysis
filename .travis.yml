@@ -12,3 +12,7 @@ install:
 
 script:
  - bash run_tests.sh
+
+
+after_success:
+    coveralls
