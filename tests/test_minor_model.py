@@ -1,4 +1,4 @@
-from models import Gene, Sample, Phenotype
+from models import Gene, Sample, SampleCollection
 
 # TODO method for creating samples faster
 
@@ -30,15 +30,15 @@ def test_sample_from_names():
     assert list(sample.data.values()) == [1.2345, 6.5432]
 
 
-def test_phenotype_init():
+def test_sample_collection_init():
     genes1 = {Gene('BAD'): 1.2345, Gene('FUCA2'): 6.5432}
     genes2 = {Gene('BAD'): 2.3456, Gene('FUCA2'): 7.6543}
 
     samples = [Sample('Tumour_1', genes1), Sample('Tumour_2', genes2)]
 
-    phenotype = Phenotype('Tumour', samples)
+    sample_collection = SampleCollection('Tumour', samples)
 
-    assert phenotype.name == 'Tumour'
-    assert all(isinstance(k, Sample) for k in phenotype.samples)
+    assert sample_collection.name == 'Tumour'
+    assert all(isinstance(k, Sample) for k in sample_collection.samples)
 
-# TODO test rest of phenotype methods
+# TODO test rest of sample_collection methods

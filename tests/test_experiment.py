@@ -1,8 +1,8 @@
 import pytest
 
-from models import Experiment, Phenotype, Sample
+from models import Experiment, SampleCollection, Sample
 
-# TODO methods for creating samples and phenotypes
+# TODO methods for creating samples and sample_collections
 
 
 def test_experiment_init():
@@ -13,13 +13,13 @@ def test_experiment_init():
     tumour_samples = [Sample.from_names('Tumour_1', data1), Sample.from_names('Tumour_2',data2)]
     normal_samples = [Sample.from_names('Normal_1',data3)]
 
-    tumour = Phenotype('Tumour', tumour_samples)
-    normal = Phenotype('Normal', normal_samples)
+    tumour = SampleCollection('Tumour', tumour_samples)
+    normal = SampleCollection('Normal', normal_samples)
 
     experiment = Experiment(case=tumour, control = normal)
 
-    assert isinstance(experiment.case, Phenotype)
-    assert isinstance(experiment.control, Phenotype)
+    assert isinstance(experiment.case, SampleCollection)
+    assert isinstance(experiment.control, SampleCollection)
 
     assert experiment.case == tumour
     assert experiment.control == normal

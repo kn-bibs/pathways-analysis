@@ -104,13 +104,13 @@ def first_line(file_object):
 
 
 # TODO class variable with set of genes + method(s) for checking data integrity
-class Phenotype:
-    """Phenotype is a collection of samples of common origin or characteristic.
+class SampleCollection:
+    """A collection of samples of common origin or characteristic.
 
-    An example phenotype can be:
+    An example sample_collection can be:
         (Breast_cancer_sample_1, Breast_cancer_sample_2) named "Breast cancer".
 
-        The common origin/characteristics for "Breast cancer" phenotype could be
+        The common origin/characteristics for "Breast cancer" sample_collection could be
         "a breast tumour", though samples had been collected from two donors.
 
     Another example are controls:
@@ -130,7 +130,7 @@ class Phenotype:
         return {s.name: pd.DataFrame(s) for s in self.samples}
 
     def __add__(self, other):
-        return Phenotype(self.name, self.samples + other.samples)
+        return SampleCollection(self.name, self.samples + other.samples)
 
     @classmethod
     def from_file(
@@ -140,11 +140,11 @@ class Phenotype:
             use_header=True, reverse_selection=False, prefix=None,
             header_line=0, description_column=None
     ):
-        """Create a phenotype (collection of samples) from csv/tsv file.
+        """Create a sample_collection (collection of samples) from csv/tsv file.
 
         Args:
             name:
-                a name of the phenotype (or group of samples) which will
+                a name of the sample_collection (or group of samples) which will
                 identify it (like "Tumour_1" or "Control_in_20_degrees")
 
             file_object: a file (containing gene expression)
@@ -305,7 +305,7 @@ class Phenotype:
     @classmethod
     def from_gsea_file(cls):
         """Stub: if we need to handle very specific files,
-        for various analysis methods, we can extend Phenotype
+        for various analysis methods, we can extend SampleCollection
         with class methods like from_gsea_file."""
         pass
 
@@ -314,7 +314,7 @@ class Phenotype:
 # TODO unify file reading with argument_parser
 class Experiment:
 
-    def __init__(self, case: Phenotype, control: Phenotype):
+    def __init__(self, case: SampleCollection, control: SampleCollection):
         self.control = control
         self.case = case
 
@@ -340,7 +340,7 @@ class Experiment:
 
 
 class Study:
-    def __init__(self, cases: Sequence[Phenotype], control: Phenotype):
+    def __init__(self, cases: Sequence[SampleCollection], control: SampleCollection):
         for case in cases:
             self.experiments = Experiment(case, control)
 

@@ -1,14 +1,14 @@
 import argparse
 
 from methods import Method
-from models import Phenotype, Experiment
+from models import SampleCollection, Experiment
 
 from .parser import Parser, Argument
 from .types import Slice, one_of, Indices, dsv, Range
 from .method_parser import MethodParser
 
 
-class PhenotypeFactory(Parser):
+class SampleCollectionFactory(Parser):
     """Provide {parser_name} samples. Requires a file (or files) with samples.
 
      The files should come in Delimiter Separated Values format
@@ -98,7 +98,7 @@ class PhenotypeFactory(Parser):
                 use_header = isinstance(opts.header[i], int)
 
                 sample_collections.append(
-                    Phenotype.from_file(
+                    SampleCollection.from_file(
                         f'Sample collection, part {i} of {name}',
                         file_obj,
                         columns_selector=opts.columns[i].get_iterator if opts.columns else None,
@@ -112,7 +112,7 @@ class PhenotypeFactory(Parser):
                     )
                 )
 
-            opts.phenotype = sum(sample_collections, Phenotype(name))
+            opts.sample_collection = sum(sample_collections, SampleCollection(name))
         return opts
 
 
@@ -155,13 +155,13 @@ class SingleFileExperimentFactory(Parser):
 
         opts = self.namespace
 
-        def produce_phenotype(created_group, other_group):
+        def produce_collection_of_samples(created_group, other_group):
             reverse = hasattr(opts, 'reverse_' + created_group)
             get_columns_from = created_group
             if reverse:
                 get_columns_from = other_group
 
-            return PhenotypeFactory(
+            return SampleCollectionFactory(
                 name=created_group,
                 files=opts.files,
                 columns=getattr(opts, get_columns_from),
@@ -181,14 +181,16 @@ class SingleFileExperimentFactory(Parser):
                         'and which should be used as the case.'
                     )
 
-            phenotypes = {'control': produce_phenotype('control', 'case')}
+            collections = {
+                'control': produce_collection_of_samples('control', 'case')
+            }
             # reuse the same file(s)
             for f in opts.files:
                 f.seek(0)
-            phenotypes['case'] = produce_phenotype('case', 'control')
+            collections['case'] = produce_collection_of_samples('case', 'control')
 
-            for name, phenotype in phenotypes.items():
-                setattr(opts, name, phenotype)
+            for name, sample_collection in collections.items():
+                setattr(opts, name, sample_collection)
 
         return opts
 
@@ -198,8 +200,8 @@ class CLIExperiment(Parser):
 
     pull_to_namespace_above = True
 
-    control = PhenotypeFactory()
-    case = PhenotypeFactory()
+    control = SampleCollectionFactory()
+    case = SampleCollectionFactory()
     data = SingleFileExperimentFactory()
 
     def produce(self, unknown_args=None):
@@ -223,7 +225,7 @@ class CLIExperiment(Parser):
 
         del opts.data
 
-        opts.experiment = Experiment(opts.case.phenotype, opts.control.phenotype)
+        opts.experiment = Experiment(opts.case.sample_collection, opts.control.sample_collection)
 
         return opts
 

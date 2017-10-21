@@ -91,19 +91,19 @@ def test_simple_files_loading(test_files):
 
     # one file for case, one for control
     opts = p_parse('case t.tsv control c.tsv')
-    assert len(opts.case.phenotype.samples) == 2
+    assert len(opts.case.sample_collection.samples) == 2
 
     # two files for case, one for control
     opts = p_parse('control c.tsv case t.tsv t_2.tsv')
-    assert len(opts.case.phenotype.samples) == 4
+    assert len(opts.case.sample_collection.samples) == 4
 
     with parsing_error(match='Neither data nor \(case & control\) have been provided!'):
         p_parse('')
 
-    phenotypes = {'case': 'Control', 'control': 'Case'}
-    for phenotype, name in phenotypes.items():
+    sample_collections = {'case': 'Control', 'control': 'Case'}
+    for sample_collection, name in sample_collections.items():
         with parsing_error(match=f'{name} has not been provided!'):
-            p_parse(f'{phenotype} c.tsv')
+            p_parse(f'{sample_collection} c.tsv')
 
 
 def test_select_samples(test_files):
@@ -116,8 +116,8 @@ def test_select_samples(test_files):
     for command in commands:
         opts = p_parse(command)
 
-        assert opts.control.phenotype.samples == expected_controls[:1]
-        assert opts.case.phenotype.samples == expected_cases[:1]
+        assert opts.control.sample_collection.samples == expected_controls[:1]
+        assert opts.case.sample_collection.samples == expected_cases[:1]
 
     # get both tumour samples from file t.tsv and
     # the first sample (Tumour_3) from file t_2.tsv
@@ -128,7 +128,7 @@ def test_select_samples(test_files):
 
     for command in commands:
         opts = p_parse(command)
-        assert len(opts.case.phenotype.samples) == 3
+        assert len(opts.case.sample_collection.samples) == 3
 
     # lets try to grab a sample which is not in the file
 
@@ -160,8 +160,8 @@ def test_columns_purpose_deduction(test_files):
     for command in commands:
         opts = p_parse(command)
 
-        assert opts.control.phenotype.samples == expected_controls
-        assert opts.case.phenotype.samples == expected_cases
+        assert opts.control.sample_collection.samples == expected_controls
+        assert opts.case.sample_collection.samples == expected_cases
 
 
 def test_non_tab_delimiter(tmpdir):
@@ -181,8 +181,8 @@ def test_non_tab_delimiter(tmpdir):
 
     opts = p_parse('case t.tsv control c.tsv --delimiter ,')
 
-    assert opts.control.phenotype.samples == expected_controls
-    assert opts.case.phenotype.samples == expected_cases
+    assert opts.control.sample_collection.samples == expected_controls
+    assert opts.case.sample_collection.samples == expected_cases
 
 
 def test_file_with_description(test_files, tmpdir):
@@ -203,13 +203,13 @@ def test_file_with_description(test_files, tmpdir):
     # user forgot
     with pytest.warns(UserWarning, match=expected_warning):
         opts = p_parse('case t.tsv control control_with_descriptions.tsv')
-        assert len(opts.control.phenotype.samples) == 3
+        assert len(opts.control.sample_collection.samples) == 3
 
     # user remembered
     opts = p_parse('case t.tsv control control_with_descriptions.tsv -d')
-    assert len(opts.control.phenotype.samples) == 2
+    assert len(opts.control.sample_collection.samples) == 2
 
-    assert set(opts.control.phenotype.samples[0].genes) == {
+    assert set(opts.control.sample_collection.samples[0].genes) == {
         Gene('TP53', description='Tumour protein 53'),
         Gene('BRCA2', description='Breast cancer type 2 s. protein')
     }
@@ -222,9 +222,9 @@ def test_custom_sample_names(test_files):
     )
 
     # case should not be affected anyhow there
-    assert opts.case.phenotype.samples == expected_cases
+    assert opts.case.sample_collection.samples == expected_cases
 
-    controls = opts.control.phenotype.samples
+    controls = opts.control.sample_collection.samples
 
     # are two files loaded? (each have two samples)
     assert len(controls) == 4
@@ -252,8 +252,8 @@ def test_merged_file(test_files):
     for command in commands_first_samples:
         opts = p_parse(command)
 
-        assert opts.control.phenotype.samples == expected_controls[:1]
-        assert opts.case.phenotype.samples == expected_cases[:1]
+        assert opts.control.sample_collection.samples == expected_controls[:1]
+        assert opts.case.sample_collection.samples == expected_cases[:1]
 
     commands_all_samples = [
         'data merged.tsv --case 2: --control :2',
@@ -263,8 +263,8 @@ def test_merged_file(test_files):
     for command in commands_all_samples:
         opts = p_parse(command)
 
-        assert opts.control.phenotype.samples == expected_controls
-        assert opts.case.phenotype.samples == expected_cases
+        assert opts.control.sample_collection.samples == expected_controls
+        assert opts.case.sample_collection.samples == expected_cases
 
     with parsing_error(match='Neither --case nor --control provided'):
         p_parse('data merged.tsv')
