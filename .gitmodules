@@ -1,4 +1,4 @@
 [submodule "pathways-data"]
-	path = pathways-data
+	path = data
 	url = https://github.com/kn-bibs/pathways-data
 	branch = master
