@@ -99,6 +99,31 @@ class Argument:
                 )
 
 
+def create_action(callback, exit_immediately=True):
+    """Factory for :class:`argparse.Action`, for simple callback execution"""
+
+    class Action(argparse.Action):
+
+        def __call__(self, parser, namespace, *args, **kwargs):
+            code = callback(namespace)
+            if exit_immediately:
+                sys.exit(code)
+
+    return Action
+
+
+def action(method):
+    """Decorator for Action.
+
+    Args:
+        method: static or class method for use as a callback
+    """
+    return Argument(
+        action=create_action(method),
+        nargs=0
+    )
+
+
 def dedent_help(text):
     """Dedent text by four spaces"""
     return textwrap.dedent(' ' * 4 + text)
@@ -194,6 +219,8 @@ class Parser:
         self.parser = argparse.ArgumentParser(
             formatter_class=argparse.RawDescriptionHelpFormatter
         )
+
+        assert self.__parsing_order__ in ['depth-first', 'breadth-first']
 
         self.arguments = {}
         # children parsers
@@ -308,6 +335,26 @@ class Parser:
             argument.name = name
         self.arguments[name] = argument
 
+    def parse_single_level(self, ungrouped_args):
+        if self.pull_to_namespace_above and self.__skip_if_absent__ and not ungrouped_args:
+            # do not run validate/produce and parsing if there is nothing to parse (part B)
+            return self.namespace, ungrouped_args
+
+        namespace, unknown_args = self.parser.parse_known_args(
+            ungrouped_args,
+            namespace=self.namespace
+        )
+        try:
+            self.validate(self.namespace)
+            opts = self.produce(unknown_args)
+        except (ValueError, TypeError, argparse.ArgumentTypeError) as e:
+            self.error(e.args[0])
+            raise e
+
+        assert opts is namespace
+
+        return opts, unknown_args
+
     def parse_known_args(self, args: Sequence[str]):
         """Parse known arguments, like :meth:`argparse.ArgumentParser.parse_known_args`.
 
@@ -317,6 +364,9 @@ class Parser:
             - additional post-processing with `self.produce` (after validation)
         """
         grouped_args, ungrouped_args = group_arguments(args, self.all_subparsers)
+
+        if self.__parsing_order__ == 'breadth-first':
+            opts, unknown_args = self.parse_single_level(ungrouped_args)
 
         for name, parser in self.subparsers.items():
 
@@ -333,30 +383,19 @@ class Parser:
                 for key, value in vars(namespace).items():
                     setattr(self.namespace, key, value)
             else:
-                # only invoke sub-parser parsing if it was explicitly enlisted
-                if name in grouped_args:
-                    namespace, not_parsed_args = parser.parse_known_args(grouped_args[name])
-                    setattr(self.namespace, name, namespace)
-                else:
+                if parser.__skip_if_absent__ and name not in grouped_args:
+                    # do not run validate/produce and parsing if there is nothing to parse (part A)
                     setattr(self.namespace, name, None)
                     not_parsed_args = None
+                else:
+                    namespace, not_parsed_args = parser.parse_known_args(grouped_args[name])
+                    setattr(self.namespace, name, namespace)
 
             if not_parsed_args:
                 parser.error(f'unrecognized arguments: {" ".join(not_parsed_args)}')
 
-        namespace, unknown_args = self.parser.parse_known_args(
-            ungrouped_args,
-            namespace=self.namespace
-        )
-        assert namespace is self.namespace
-
-        try:
-            self.validate(self.namespace)
-            opts = self.produce(unknown_args)
-        except (ValueError, TypeError, argparse.ArgumentTypeError) as e:
-            self.error(e.args[0])
-
-        assert opts is self.namespace
+        if self.__parsing_order__ == 'depth-first':
+            opts, unknown_args = self.parse_single_level(ungrouped_args)
 
         return self.namespace, unknown_args
 
@@ -387,6 +426,20 @@ class Parser:
         of some other parser.
         """
         return False
+
+    @property
+    def __skip_if_absent__(self):
+        """Only invoke sub-parser parsing if it was explicitly enlisted"""
+        return True
+
+    @property
+    def __parsing_order__(self):
+        """What should be parsed first:
+
+            arguments of this parser ('breadth-first') or
+            arguments and parsers of sup-parsers ('depth-first')?
+        """
+        return 'depth-first'
 
     def produce(self, unknown_args):
         """Post-process already parsed namespace.
