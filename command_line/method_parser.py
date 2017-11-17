@@ -74,6 +74,7 @@ class MethodParser(Parser):
 
     def __init__(self, method, **kwargs):
         self.method = method
+        restricted_names = ['name']
 
         # add arguments defined in a Method subclass
         for name, attribute in vars(method).items():
@@ -87,6 +88,11 @@ class MethodParser(Parser):
         docstring_help = analyze_docstring(docstring)
 
         for name, parameter in signature.parameters.items():
+            # ignore *args and **kwargs
+            if parameter.kind in [parameter.VAR_KEYWORD, parameter.VAR_POSITIONAL]:
+                continue
+            if name in restricted_names:
+                raise ValueError(f'"{name}" cannot be used as a name of argument')
             if not hasattr(self, name):
                 argument = Argument(
                     default=empty_to_none(parameter.default),
@@ -96,5 +102,9 @@ class MethodParser(Parser):
 
                 )
                 setattr(self, name, argument)
+            else:
+                argument = getattr(self, name)
+                if not hasattr(argument, 'help') or not argument.help:
+                    argument.help = docstring_help.get(name, None)
 
         super().__init__(**kwargs)

@@ -199,6 +199,7 @@ class CLIExperiment(Parser):
     """Use both: case and control or data to create an Experiment."""
 
     pull_to_namespace_above = True
+    __skip_if_absent__ = False
 
     control = SampleCollectionFactory()
     case = SampleCollectionFactory()
@@ -235,6 +236,7 @@ class CLI(Parser):
 
     method_name = Argument(choices=Method.members, name='method', optional=False)
     experiment = CLIExperiment()
+    __parsing_order__ = 'breadth-first'
 
     @staticmethod
     def create_method(name):

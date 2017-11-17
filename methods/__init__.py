@@ -1,1 +1,2 @@
-from .gsea import *
+from .gsea import GSEA
+from .method import Method
