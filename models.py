@@ -1,7 +1,7 @@
-from typing import Callable, Mapping, Sequence
+from functools import lru_cache
+from typing import Callable, Mapping, Sequence, List
 from warnings import warn
 
-import numpy as np
 import pandas as pd
 
 
@@ -22,14 +22,24 @@ class Gene:
 
     instances = {}
 
-    def __new__(cls, name, *args, **kwargs):
+    def __new__(cls, *args, **kwargs):
+        if not args:
+            # for pickling the requirements are lessened
+            # ONLY for pickling
+            return super(Gene, cls).__new__(cls)
+        name = args[0]
         if name not in cls.instances:
-            cls.instances[name] = super(Gene, cls).__new__(cls, *args, **kwargs)
+            cls.instances[name] = super(Gene, cls).__new__(cls)
+            # TODO: test for description & name
+            cls.instances[name].__init__(*args, **kwargs)
         return cls.instances[name]
 
     def __init__(self, name, description=None):
         self.name = name
         self.description = description
+
+    def __repr__(self):
+        return f'<Gene: {self.name}>'
 
 
 class Sample:
@@ -91,11 +101,13 @@ class Sample:
         return f'<Sample "{self.name}" with {len(self.data)} genes>'
 
 
-def first_line(file_object):
+def first_line(file_object, skip_rows):
     line = None
 
-    while not line:
+    while not (line and skip_rows < 0):
         line = file_object.readline()
+        if line:
+            skip_rows -= 1
 
     # return to the beginning
     file_object.seek(0)
@@ -120,8 +132,30 @@ class SampleCollection:
     """
 
     def __init__(self, name, samples=None):
-        self.samples = samples or []
+        self.samples: List[Sample] = samples or []
         self.name = name
+
+    @property
+    def labels(self):
+        return [sample.name for sample in self.samples]
+
+    @property
+    @lru_cache(maxsize=1)
+    def genes(self):
+        """Return all genes present in the collection of samples.
+
+        Raises AssertionError if there is inconsistency in genes in samples.
+        """
+        genes = self.samples[0].genes
+        assert all(sample.genes == genes for sample in self.samples[1:])
+        return genes
+
+    @lru_cache(maxsize=None)
+    def of_gene(self, gene):
+        return tuple(
+            sample.data[gene]
+            for sample in self.samples
+        )
 
     def as_array(self):
         """
@@ -187,7 +221,7 @@ class SampleCollection:
             warn(f'Passed file object: {file_object} was read before.')
             raise Exception()
 
-        line = first_line(file_object)
+        line = first_line(file_object, header_line)
         header_items = [item.strip() for item in line.split('\t')]
         gene_columns = [index_col]
 
@@ -209,7 +243,8 @@ class SampleCollection:
             # sniff how many columns do we have in the file
             columns_count = line.count(delimiter)
 
-            all_sample_columns = list(range(column_shift, columns_count + column_shift))
+            # TODO test for this change
+            all_sample_columns = list(range(column_shift, columns_count))
 
             # generate identifiers (numbers) for all columns
             # and take the requested subset
@@ -283,16 +318,21 @@ class SampleCollection:
                 'not both. We will use columns this time.'
             )
 
-        data = pd.read_table(
-            file_object,
-            delimiter=delimiter,
-            # None - do not use, 0 - use first row
-            header=header_line if use_header else None,
-            index_col=gene_columns,
-            usecols=columns or samples,
-            prefix=f'{prefix}_' if prefix else ''
-        )
-
+        try:
+            data = pd.read_table(
+                file_object,
+                delimiter=delimiter,
+                # None - do not use, 0 - use first row
+                header=header_line if use_header else None,
+                index_col=gene_columns,
+                usecols=columns or samples,
+                prefix=f'{prefix}_' if prefix else ''
+            )
+        except Exception as e:
+            from traceback import print_tb
+            from traceback import print_stack
+            print_tb(e)
+            print(e)
         descriptions = description_column is not None
 
         samples = [
@@ -303,15 +343,66 @@ class SampleCollection:
         return cls(name, samples)
 
     @classmethod
-    def from_gsea_file(cls):
-        """Stub: if we need to handle very specific files,
-        for various analysis methods, we can extend SampleCollection
-        with class methods like from_gsea_file."""
-        pass
+    def from_gct_file(cls, name, file_object, **kwargs):
+        """Parse file in Gene Cluster Text file format, as defined on:
+
+        software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats
+        User is allowed to provide settings different from the standard.
+        """
+        version = file_object.readline()
+        rows_count, samples_count = map(int, file_object.readline().split('\t'))
+
+        default_values = {
+            'description_column': True,
+            'header_line': 2
+        }
+
+        if version != '#1.2\n':
+            warn('Unsupported version of GCT file')
+
+        file_object.seek(0)
+
+        for key, value in default_values.items():
+            kwargs[key] = value
+
+        self = cls.from_file(
+            name, file_object,
+            **kwargs
+        )
+
+        # if user did not choose a subset of samples
+        if not (kwargs['columns_selector'] or kwargs['samples']):
+            # check if the samples numbers are ok
+            if len(self.samples) != samples_count:
+                warn(
+                    f'Samples count ({len(self.samples)}) '
+                    f'does not match with the {samples_count} '
+                    f'declared in {name} file.'
+                )
+
+        if rows_count != len(self.samples[0].genes):
+            warn(
+                f'Number of rows ({rows_count}) does not match '
+                f'with the {len(self.samples[0].genes)} '
+                f'declared in {name} file'
+            )
+
+        return self
+
+    @classmethod
+    def from_csv_file(cls, **kwargs):
+        if 'delimiter' in kwargs:
+            if kwargs['delimiter'] != ',':
+                raise Warning(
+                    'You are using not comma delimiter for what looks like csv file. '
+                    'Is this really the thing you want to do?'
+                )
+        else:
+            kwargs['delimiter'] = ','
+        return cls.from_file(**kwargs)
 
 
 # TODO class variable with set of genes + method(s) for checking data integrity
-# TODO unify file reading with argument_parser
 class Experiment:
 
     def __init__(self, case: SampleCollection, control: SampleCollection):

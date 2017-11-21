@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 from methods import Method
 from models import SampleCollection, Experiment
@@ -82,6 +83,22 @@ class SampleCollectionFactory(Parser):
              'it is assumed that there is no such column.'
     )
 
+    constructors_by_ext = {
+        'tsv': SampleCollection.from_file,
+        'csv': SampleCollection.from_csv_file,
+        'gct': SampleCollection.from_gct_file
+    }
+
+    deduce_format = Argument(
+        type=bool,
+        default=True,
+        help='Deduce file format and automatically set the best '
+             'parsing parameters. The format will be inferred from '
+             'extension of the provided file(s). '
+             f'Following formats are supported: {constructors_by_ext}. '
+             'Default: true.'
+    )
+
     def produce(self, unknown_args=None):
         opts = self.namespace
         name = opts.name or self.name
@@ -97,8 +114,15 @@ class SampleCollectionFactory(Parser):
 
                 use_header = isinstance(opts.header[i], int)
 
+                constructor = SampleCollection.from_file
+
+                if opts.deduce_format:
+                    extension = Path(file_obj.name).suffix[1:]
+                    if extension in self.constructors_by_ext:
+                        constructor = self.constructors_by_ext[extension]
+
                 sample_collections.append(
-                    SampleCollection.from_file(
+                    constructor(
                         f'Sample collection, part {i} of {name}',
                         file_obj,
                         columns_selector=opts.columns[i].get_iterator if opts.columns else None,

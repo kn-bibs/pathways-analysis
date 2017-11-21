@@ -1,5 +1,7 @@
-from .gsea import GSEA
+from .gsea import SimpleGSEA
+from .gsea import GeneralisedGSEA
 
 __all__ = [
-    'GSEA'
+    'SimpleGSEA',
+    'GeneralisedGSEA',
 ]

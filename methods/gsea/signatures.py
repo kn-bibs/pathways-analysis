@@ -5,6 +5,7 @@ from urllib.request import urlretrieve
 import os
 
 from command_line.parser import Argument, Parser, action
+from models import Gene
 
 REMOTE = 'https://github.com/kn-bibs/pathways-data/raw/master/gsea/msigdb/'
 DATA_DIR = Path('data')
@@ -14,8 +15,23 @@ class GeneSet:
 
     def __init__(self, name, genes, url=None):
         self.name = name
+        self.genes = {Gene(name) for name in genes}
         self.genes = genes
         self.url = url
+        self.enrichment = None
+
+    def __contains__(self, item):
+        # TODO test
+        return item in self.genes
+
+    def __len__(self):
+        return len(self.genes)
+
+    def __lt__(self, other):
+        return self.enrichment < other.enrichment
+
+    def __repr__(self):
+        return f'<GeneSet: {self.name} with {len(self.genes)}>'
 
 
 class MolecularSignatureDatabase:
@@ -27,10 +43,16 @@ class MolecularSignatureDatabase:
         self.load()
 
     def load(self):
-        with gzip.open(self.path, 'rt') as f:
-            for line in f:
-                name, url, *genes = line.split('\t')
-                self.gene_sets[name] = GeneSet(name, genes, url)
+        if self.path.suffix.endswith('.gz'):
+            f = gzip.open(self.path, 'rt')
+        else:
+            f = open(self.path)
+
+        for line in f:
+            name, url, *genes = line.strip().split('\t')
+            self.gene_sets[name] = GeneSet(name, genes, url)
+
+        f.close()
 
 
 class RemoteDatabase(MolecularSignatureDatabase):
@@ -69,7 +91,7 @@ class DatabaseParser(Parser):
         default='H',
         help='Name of Molecular Signature Database to use. '
              'By default hallmark genes will be used. '
-             f'Use one of following: {", ".join(DATABASE_PRESETS)}'
+             f'Use one of following: {", ".join(DATABASE_PRESETS)} '
              'or provide a path to custom database (.gmt file). '
              # http://software.broadinstitute.org/gsea/msigdb_license_terms.jsp
              'Please note that due to licencing restrictions data '

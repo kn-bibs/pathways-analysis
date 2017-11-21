@@ -1,6 +1,30 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from models import Experiment
 from utils import AbstractRegisteringType, abstract_property
+
+
+class MethodResult(ABC):
+    """Result should contain list of matched pathways or processes
+
+    to be displayed in the results table. The result can include
+    additional information for the end user (in `description` field).
+
+    The names of properties of the items (pathways or processes) in
+    the list which should be used for table creation ought to be
+    enlisted in `columns` property.
+
+    Additional results created by a method should be presented in
+    `files` field of the result.
+    """
+
+    @abstract_property
+    def columns(self):
+        pass
+
+    def __init__(self, scored_list, files=None, description=''):
+        self.scored_list = scored_list
+        self.files = files or []
+        self.description = description
 
 
 class Method(metaclass=AbstractRegisteringType):
@@ -60,5 +84,5 @@ class Method(metaclass=AbstractRegisteringType):
         pass
 
     @abstractmethod
-    def run(self, experiment: Experiment):
+    def run(self, experiment: Experiment) -> MethodResult:
         pass
