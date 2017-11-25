@@ -91,6 +91,8 @@ class ConstructorParser(Parser):
     def help(self):
         if hasattr(self.constructor, 'help'):
             return self.constructor.help
+        if self.constructor.__doc__:
+            return self.constructor.__doc__
         return super().help
 
     @property

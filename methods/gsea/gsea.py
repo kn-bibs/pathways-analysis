@@ -85,31 +85,52 @@ class SimpleGSEA(Method):
         return maximum_deviation
 
 
-# TODO: do not use help, use docstring instead
 class GeneralisedGSEA(SimpleGSEA):
-    """Not finished yet."""
+    """
+    This method evaluates list of provided gene sets,
+    looking for such gene sets which are significantly
+    enriched in first of provided collections of samples (or class),
+    when compared to the second "control" group of samples.
 
-    name = 'gsea'
+    The result is presented as list of gene sets sorted by their
+    NES (normalized enrichment score) values;
+    Additionally FDR q-values and nominal p-values
+    are presented for each set of genes.
+    (TODO: FWER: p-values)
 
-    help = """
-    Expected results, based on abstract
-    Quote from supplement text:
-        The output of the GSEA-P software includes a list of the
-        gene sets sorted by their NES values along with their nominal
-        and FWER p values and their FDR q values.
-    
-    Schematic of pipeline
-    
-    Required args description
-    
-    List of additional args?
-    
+    Schematic of pipeline:
+        1. Ranked list of genes present in provided samples is created,
+           with the ranking based on differential expression (using
+           user-chosen ranking metric, default SignalToNoise).
+        2. For each set of genes:
+            - enrichment score is calculated,
+              using KS-test-like walking sum statistic;
+            - null (random) distribution of enrichment scores is created
+              using gene or class permutations
+            - nominal p-value is assessed using the null distribution
+            - normalized enrichment score is calculated
+        3. Multiple hypothesis testing adjustment is performed by FDR
+           calculation, exploring ratios of values more extreme than
+           normalized enrichment scores in the observed and
+           in all random, normalized distributions.
+
+    Required arguments:
+        One has to choose database with gene sets to be used for analysis
+
+    Additional arguments include:
+     - permutations type and count adjustment
+     - control of "p" exponent used in enrichment weighting for ranked lists creation
+     - multiprocessing control
+     - ranking metric
+
     Please refer & cite following publications:
         - Subramanian, Tamayo, et al. (2005, PNAS 102, 15545-15550)
         - Mootha, Lindgren, et al. (2003, Nat Genet 34, 267-273)
-        
+
     Please use --show_licence to display licence and copyright details.
     """
+
+    name = 'gsea'
 
     legal_disclaimer = """
         Molecular signature databases (MSigDB) are protected by 
