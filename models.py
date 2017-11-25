@@ -101,7 +101,7 @@ class Sample:
         return f'<Sample "{self.name}" with {len(self.data)} genes>'
 
 
-def first_line(file_object, skip_rows):
+def first_line(file_object, skip_rows=0):
     line = None
 
     while not (line and skip_rows < 0):
@@ -212,6 +212,7 @@ class SampleCollection:
             prefix: prefix for custom samples naming schema
 
             header_line: number of non-empty line with sample names
+                None - do not use, 0 - use first row
 
             description_column:
                 is column with description of present in the file
@@ -221,7 +222,7 @@ class SampleCollection:
             warn(f'Passed file object: {file_object} was read before.')
             raise Exception()
 
-        line = first_line(file_object, header_line)
+        line = first_line(file_object, header_line or 0)
         header_items = [item.strip() for item in line.split('\t')]
         gene_columns = [index_col]
 
@@ -243,8 +244,7 @@ class SampleCollection:
             # sniff how many columns do we have in the file
             columns_count = line.count(delimiter)
 
-            # TODO test for this change
-            all_sample_columns = list(range(column_shift, columns_count))
+            all_sample_columns = list(range(column_shift, columns_count + 1))
 
             # generate identifiers (numbers) for all columns
             # and take the requested subset

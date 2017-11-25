@@ -11,6 +11,10 @@ REMOTE = 'https://github.com/kn-bibs/pathways-data/raw/master/gsea/msigdb/'
 DATA_DIR = Path('data')
 
 
+def gzip_open_text(path, mode='r'):
+    return gzip.open(path, mode + 't')
+
+
 class GeneSet:
 
     def __init__(self, name, genes, url=None):
@@ -42,29 +46,26 @@ class MolecularSignatureDatabase:
         self.gene_sets = {}
         self.load()
 
-    def load(self):
+    def load(self, opener=open):
         if self.path.suffix.endswith('.gz'):
-            f = gzip.open(self.path, 'rt')
-        else:
-            f = open(self.path)
+            opener = gzip_open_text
 
-        for line in f:
-            name, url, *genes = line.strip().split('\t')
-            self.gene_sets[name] = GeneSet(name, genes, url)
-
-        f.close()
+        with opener(self.path) as f:
+            for line in f:
+                name, url, *genes = line.strip().split('\t')
+                self.gene_sets[name] = GeneSet(name, genes, url)
 
 
 class RemoteDatabase(MolecularSignatureDatabase):
 
     def __init__(self, set_name, identifiers='symbols', version=6.1, remote=REMOTE, label=None):
-        path = f'{version}/{set_name}.v{version}.{identifiers}.gmt'
+        path = f'{version}/{set_name}.v{version}.{identifiers}.gmt.gz'
         self.raw_path = path
         self.remote = remote
         super().__init__(path, label)
 
     def fetch(self):
-        url = self.remote + str(self.raw_path) + '.gz'
+        url = self.remote + str(self.raw_path)
         os.makedirs(self.path.parent, exist_ok=True)
         urlretrieve(url, self.path)
 
@@ -115,8 +116,12 @@ class DatabaseParser(Parser):
 
     @action
     def show_gene_sets(namespace):
-        parser = DatabaseParser(**vars(namespace))
-        db = parser.produce(None).database
+        try:
+            parser = DatabaseParser(**vars(namespace))
+            db = parser.produce(None).database
+        except Exception as e:
+            print(e)
+            raise
         for name, gene_set in db.gene_sets.items():
             print(name, gene_set.url)
 

@@ -162,7 +162,7 @@ class GeneralisedGSEA(SimpleGSEA):
         ranked_list = self.create_ranked_gene_list(
             experiment.case, experiment.control
         )
-        gene_sets = [s for s in self.database.gene_sets.values() if 'P53' in s.name]
+        gene_sets = [s for s in self.database.gene_sets.values()]
 
         # gene_set is S in the publication
 
