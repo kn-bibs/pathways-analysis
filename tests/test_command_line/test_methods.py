@@ -108,7 +108,7 @@ def test_analyze_docstring():
     Returns:
         results
     """
-    from command_line.method_parser import analyze_docstring
+    from command_line.constructor_parser import analyze_docstring
     args = analyze_docstring(docstring)
 
     expected_args = {

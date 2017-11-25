@@ -27,7 +27,7 @@ class Argument:
     parser will work with Argument too. Additionally, some nice
     features, like automated naming are available.
 
-    Worth to mention that when used with :class:`~.command_line.method_parser.MethodParser`,
+    Worth to mention that when used with :class:`~.command_line.method_parser.ConstructorParser`,
     `type` and `help` will be automatically deduced.
     """
 
@@ -288,7 +288,7 @@ class Parser:
 
         for name, sub_parser in self.all_subparsers.items():
 
-            if sub_parser.pull_to_namespace_above:
+            if sub_parser.__pull_to_namespace_above__:
                 continue
 
             parser = native_sub_parser.add_parser(
@@ -325,7 +325,7 @@ class Parser:
         parser.parser_name = name
         self.subparsers[name] = parser
 
-        if parser.pull_to_namespace_above:
+        if parser.__pull_to_namespace_above__:
             self.lifted_args.update(parser.arguments)
             self.lifted_parsers.update(parser.subparsers)
 
@@ -336,7 +336,7 @@ class Parser:
         self.arguments[name] = argument
 
     def parse_single_level(self, ungrouped_args):
-        if self.pull_to_namespace_above and self.__skip_if_absent__ and not ungrouped_args:
+        if self.__pull_to_namespace_above__ and self.__skip_if_absent__ and not ungrouped_args:
             # do not run validate/produce and parsing if there is nothing to parse (part B)
             return self.namespace, ungrouped_args
 
@@ -370,7 +370,7 @@ class Parser:
 
         for name, parser in self.subparsers.items():
 
-            if parser.pull_to_namespace_above:
+            if parser.__pull_to_namespace_above__:
 
                 namespace, not_parsed_args = parser.parse_known_args([
                     arg_str
@@ -412,7 +412,7 @@ class Parser:
             argument.validate(opts)
 
     @property
-    def pull_to_namespace_above(self):
+    def __pull_to_namespace_above__(self):
         """Makes the parser "translucent" for the end user.
 
         Though parsing methods (as well as validate & produce)

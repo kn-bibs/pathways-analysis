@@ -6,7 +6,7 @@ from models import SampleCollection, Experiment
 
 from .parser import Parser, Argument
 from .types import Slice, one_of, Indices, dsv, Range
-from .method_parser import MethodParser
+from .constructor_parser import ConstructorParser
 
 
 class SampleCollectionFactory(Parser):
@@ -222,7 +222,7 @@ class SingleFileExperimentFactory(Parser):
 class CLIExperiment(Parser):
     """Use both: case and control or data to create an Experiment."""
 
-    pull_to_namespace_above = True
+    __pull_to_namespace_above__ = True
     __skip_if_absent__ = False
 
     control = SampleCollectionFactory()
@@ -269,7 +269,7 @@ class CLI(Parser):
 
         # initialize parser for this method
         # (different methods require different arguments)
-        method_parser = MethodParser(method=method)
+        method_parser = ConstructorParser(constructor=method)
 
         return method_parser
 
@@ -291,7 +291,7 @@ class CLI(Parser):
                 # and for a method) should be displayed.
 
                 methods = {
-                    name: MethodParser(method=method)
+                    name: ConstructorParser(constructor=method)
                     for name, method in Method.members.items()
                 }
 
@@ -317,8 +317,8 @@ class CLI(Parser):
             if argument not in remaining_unknown_args:
                 unknown_args.remove(argument)
 
-        # ant initialize the method with these arguments
-        options.method = method_parser.method(**vars(method_options))
+        # and initialize the method with these arguments
+        options.method = method_parser.constructor(**vars(method_options))
 
         return options
 

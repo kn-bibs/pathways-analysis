@@ -60,30 +60,55 @@ def empty_to_none(value):
     return value
 
 
-class MethodParser(Parser):
+class ConstructorParser(Parser):
+    """Create a parser from an existing class, using arguments from __init__
+
+    as well as arguments and sub-parsers defined as class properties.
+
+    Example usage::
+
+        import argparse
+
+        class MyProgram:
+
+            database = Argument(
+                type=argparse.FileType('r'),
+                help='Path to file with the database'
+            )
+
+            def __init__(threshold:float=0.05, database=None):
+                # do some magic
+                pass
+
+        parser = ConstructorParser(MyProgram)
+
+        options, remaining_unknown_args = parser.parse_known_args(unknown_args)
+
+        program = parser.constructor(**vars(options))
+    """
 
     @property
     def help(self):
-        if hasattr(self.method, 'help'):
-            return self.method.help
+        if hasattr(self.constructor, 'help'):
+            return self.constructor.help
         return super().help
 
     @property
     def description(self):
         return self.help
 
-    def __init__(self, method, **kwargs):
-        self.method = method
+    def __init__(self, constructor, **kwargs):
+        self.constructor = constructor
         restricted_names = ['name']
 
-        # add arguments defined in a Method subclass
-        for name, attribute in vars(method).items():
+        # add arguments defined in the class of constructor
+        for name, attribute in vars(constructor).items():
             if isinstance(attribute, Parser) or isinstance(attribute, Argument):
                 setattr(self, name, attribute)
 
         # introspect method.__init__
-        signature = inspect.signature(method)
-        docstring = method.__init__.__doc__ or ''
+        signature = inspect.signature(constructor)
+        docstring = constructor.__init__.__doc__ or ''
 
         docstring_help = analyze_docstring(docstring)
 
