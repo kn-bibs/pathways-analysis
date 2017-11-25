@@ -6,8 +6,8 @@ from typing import List
 
 import numpy as np
 
-from command_line.parser import action
-from command_line.types import positive_int
+from declarative_parser.parser import action
+from declarative_parser.types import positive_int
 from methods.gsea import multiprocess
 from methods.gsea.shufflers import PhenotypeShuffler, GeneShuffler
 from methods.method import Method, MethodResult

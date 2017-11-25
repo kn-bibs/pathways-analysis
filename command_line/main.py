@@ -4,9 +4,9 @@ from pathlib import Path
 from methods import Method
 from models import SampleCollection, Experiment
 
-from .parser import Parser, Argument
-from .types import Slice, one_of, Indices, dsv, Range
-from .constructor_parser import ConstructorParser
+from declarative_parser import Parser, Argument
+from declarative_parser.types import Slice, one_of, Indices, dsv, Range
+from declarative_parser.constructor_parser import ConstructorParser
 
 
 class SampleCollectionFactory(Parser):

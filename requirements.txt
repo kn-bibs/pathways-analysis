@@ -1,7 +1,7 @@
+declarative_parser
 sphinx
 sphinx-autodoc-typehints
 sphinx-autodoc-annotation
-pytest
 pandas
 numpy
 statsmodels

@@ -1,6 +1,6 @@
 import pytest
 
-from command_line.parser import Argument
+from declarative_parser.parser import Argument
 from patapy import run
 from methods import Method
 from test_command_line.test_main import test_files
@@ -89,35 +89,3 @@ def test_methods(capsys, test_files):
         with parsing_output(capsys, contains=contains, does_not_contain=does_not_contain):
             parse('some_method -h')
 
-
-def test_analyze_docstring():
-
-    docstring = """Some docstring.
-    
-    Arguments:
-        my_arg: is an important argument
-        active: should some feature be active
-                or maybe it should be not?
-        spread:
-            should be big or small?
-            how big or how small?
-            
-    Example:
-        examples should not be interpreted as an argument
-    
-    Returns:
-        results
-    """
-    from command_line.constructor_parser import analyze_docstring
-    args = analyze_docstring(docstring)
-
-    expected_args = {
-        'my_arg': 'is an important argument',
-        'active': 'should some feature be active or maybe it should be not?',
-        'spread': 'should be big or small? how big or how small?'
-    }
-
-    for name, value in expected_args.items():
-        assert args[name] == value
-
-    assert 'Example' not in args

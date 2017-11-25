@@ -4,7 +4,7 @@ from urllib.request import urlretrieve
 
 import os
 
-from command_line.parser import Argument, Parser, action
+from declarative_parser.parser import Argument, Parser, action
 from models import Gene
 
 REMOTE = 'https://github.com/kn-bibs/pathways-data/raw/master/gsea/msigdb/'

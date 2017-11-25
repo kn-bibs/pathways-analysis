@@ -36,7 +36,7 @@ class Method(metaclass=AbstractRegisteringType):
     For example::
 
         class MyMethod(Method)
-            def __init__(threshold:float=0.05):
+            def __init__(self, threshold: float=0.05):
                 pass
 
     For the simple arguments following information will be deduced:
@@ -59,7 +59,7 @@ class Method(metaclass=AbstractRegisteringType):
                 help='Path to file with the database'
             )
 
-            def __init__(threshold:float=0.05, database=None):
+            def __init__(self, threshold: float=0.05, database=None):
                 pass
 
     If help is given in both :class:`~command_line.parser.Argument` and docstring,
