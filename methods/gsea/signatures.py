@@ -1,5 +1,6 @@
 import gzip
 from pathlib import Path
+from typing import Mapping
 from urllib.request import urlretrieve
 
 import os
@@ -42,39 +43,50 @@ class GeneSet:
 
 class MolecularSignatureDatabase:
 
+    def __init__(self, gene_sets: Mapping[str, GeneSet], label=None):
+        self.label = label
+        self.gene_sets = gene_sets
+
+
+class GMTSignatureDatabase(MolecularSignatureDatabase):
+
     def __init__(self, path, label=None):
         self.path = DATA_DIR / path
-        self.label = label
-        self.gene_sets = {}
-        self.load()
+        gene_sets = self.load()
+        super().__init__(gene_sets, label)
 
     def load(self, opener=open):
+
         if self.path.suffix.endswith('.gz'):
             opener = gzip_open_text
+
+        gene_sets = {}
 
         with opener(self.path) as f:
             for line in f:
                 name, url, *genes = line.strip().split('\t')
-                self.gene_sets[name] = GeneSet(name, genes, url)
+                gene_sets[name] = GeneSet(name, genes, url)
+
+        return gene_sets
 
 
-class RemoteDatabase(MolecularSignatureDatabase):
+class RemoteDatabase(GMTSignatureDatabase):
 
     def __init__(self, set_name, identifiers='symbols', version=6.1, remote=REMOTE, label=None):
         path = f'{version}/{set_name}.v{version}.{identifiers}.gmt.gz'
         self.raw_path = path
         self.remote = remote
-        super().__init__(path, label)
+        GMTSignatureDatabase.__init__(self, path, label)
 
     def fetch(self):
         url = self.remote + str(self.raw_path)
         os.makedirs(self.path.parent, exist_ok=True)
         urlretrieve(url, self.path)
 
-    def load(self):
+    def load(self, opener=open):
         if not self.path.exists():
             self.fetch()
-        super().load()
+        return super().load(opener)
 
 
 DATABASE_PRESETS = {
@@ -143,5 +155,5 @@ class DatabaseParser(Parser):
             )
         else:
             # or to load a database from path
-            n.database = MolecularSignatureDatabase(name)
+            n.database = GMTSignatureDatabase(name)
         return n

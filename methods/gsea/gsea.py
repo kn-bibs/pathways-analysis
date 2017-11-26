@@ -170,7 +170,7 @@ class GeneralisedGSEA(SimpleGSEA):
     def __init__(self, database, ranked_list_weight: float=1, ranking_metric=SignalToNoise,
                  permutation_type='genes', normalize_es=True,
                  processes: positive_int=0, permutations: positive_int=1000, min_genes=15,
-                 max_genes=500, **kwargs):
+                 max_genes=500, descending_sort=True, **kwargs):
         """
 
         Args:
@@ -196,6 +196,7 @@ class GeneralisedGSEA(SimpleGSEA):
         self.processes = processes
         self.permutations = permutations
         self.gene_sets = [s for s in self.database.gene_sets.values() if min_genes > len(s.genes) < max_genes]
+        self.descending_sort = descending_sort
         # TODO: p-value, fdr cutoff
 
     def run(self, experiment: Experiment):
@@ -283,7 +284,8 @@ class GeneralisedGSEA(SimpleGSEA):
                 (map_label(gene), self.calculate_rank(case.of_gene(gene), control.of_gene(gene)))
                 for gene in genes
             ],
-            key=itemgetter(1)
+            key=itemgetter(1),
+            reverse=self.descending_sort
         )
 
     @jit
