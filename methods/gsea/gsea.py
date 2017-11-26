@@ -1,8 +1,10 @@
+import random
 from collections import UserList
+from itertools import chain
 from math import sqrt
 from operator import itemgetter
 from textwrap import dedent
-from typing import List
+from typing import List, Iterable
 
 import numpy as np
 
@@ -29,23 +31,32 @@ class GSEAResult(MethodResult):
     """
 
 
-class ScoreDistribution(UserList):
+class ScoreDistribution:
 
-    def sub_distribution(self, condition=lambda score: True):
-        return ScoreDistribution([
-            score
-            for score in self
-            if condition(score)
-        ])
+    __slots__ = ('negative_scores', 'positive_scores')
 
-    # may be implemented internally to cache the operation, e.g. override append
-    @property
-    def positive_scores(self):
-        return self.sub_distribution(lambda score: score > 0)
+    def __init__(self, scores: Iterable=None):
+        self.negative_scores = []
+        self.positive_scores = []
+        if scores:
+            for score in scores:
+                self.append(score)
 
-    @property
-    def negative_scores(self):
-        return self.sub_distribution(lambda score: score < 0)
+    def append(self, score):
+        if score > 0:
+            self.positive_scores.append(score)
+        elif score < 0:
+            self.negative_scores.append(score)
+        else:
+            # TODO: is it the best way to do this?
+            target = random.choice((self.positive_scores, self.negative_scores))
+            target.append(score)
+
+    def __iter__(self):
+        return chain(self.negative_scores, self.positive_scores).__iter__()
+
+    def __len__(self):
+        return len(self.positive_scores) + len(self.negative_scores)
 
 
 # TODO: JavaGSAE - wrapper for Desktop version from Broad?
@@ -95,7 +106,7 @@ def is_more_extreme(x, enrichment):
 
 class GeneralisedGSEA(SimpleGSEA):
     """
-    This method evaluates list of provided gene sets,
+    GSEA method evaluates list of provided gene sets,
     looking for such gene sets which are significantly
     enriched in first of provided collections of samples (or class),
     when compared to the second "control" group of samples.
@@ -138,6 +149,8 @@ class GeneralisedGSEA(SimpleGSEA):
     Please use --show_licence to display licence and copyright details.
     """
 
+    help = __doc__
+
     name = 'gsea'
 
     legal_disclaimer = """
@@ -154,8 +167,10 @@ class GeneralisedGSEA(SimpleGSEA):
     shufflers = {'phenotypes': PhenotypeShuffler, 'genes': GeneShuffler}
 
     # TODO: metrics
-    def __init__(self, database, ranked_list_weight: float=1, ranking_metric=SignalToNoise, permutation_type='genes',
-                 normalize_es=True, processes: positive_int=0, permutations: positive_int=1000, **kwargs):
+    def __init__(self, database, ranked_list_weight: float=1, ranking_metric=SignalToNoise,
+                 permutation_type='genes', normalize_es=True,
+                 processes: positive_int=0, permutations: positive_int=1000, min_genes=15,
+                 max_genes=500, **kwargs):
         """
 
         Args:
@@ -180,6 +195,7 @@ class GeneralisedGSEA(SimpleGSEA):
         self.normalize_es = normalize_es
         self.processes = processes
         self.permutations = permutations
+        self.gene_sets = [s for s in self.database.gene_sets.values() if min_genes > len(s.genes) < max_genes]
         # TODO: p-value, fdr cutoff
 
     def run(self, experiment: Experiment):
@@ -191,14 +207,12 @@ class GeneralisedGSEA(SimpleGSEA):
         ranked_list = self.create_ranked_gene_list(
             experiment.case, experiment.control
         )
-        gene_sets = [s for s in self.database.gene_sets.values()]
-
         # gene_set is S in the publication
 
         args = (ranked_list, experiment)
 
         pool = multiprocess.Pool(self.processes)
-        gene_sets = pool.map(self.analyze_gene_set, gene_sets, shared_args=args)
+        gene_sets = pool.map(self.analyze_gene_set, self.gene_sets, shared_args=args)
 
         sorted_gene_sets = sorted(gene_sets)
 
@@ -338,7 +352,7 @@ class GeneralisedGSEA(SimpleGSEA):
 
     @staticmethod
     @jit
-    def estimate_significance_level(enrichment_score, null_distribution):
+    def estimate_significance_level(enrichment_score, null_distribution: ScoreDistribution):
         """Estimate nominal p-value using only this side (tail) of null (random) distribution
 
         that corresponds to the sign of provided enrichment score.
@@ -435,9 +449,9 @@ class GeneralisedGSEA(SimpleGSEA):
                 score /= mean_negative_abs
             return score
 
-        normalized_null = ScoreDistribution([
-            normalized(raw_score) for raw_score in null_distribution
-        ])
+        normalized_null = ScoreDistribution(
+            (normalized(raw_score) for raw_score in null_distribution)
+        )
 
         # TODO: what if mean_negative_abs is None but score is negative?
         # or mean positive is None and score positive?

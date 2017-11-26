@@ -26,7 +26,6 @@ class GeneSet:
         self.url = url
         self.enrichment = None
 
-    @jit
     def __contains__(self, item):
         # TODO test
         return item in self.genes

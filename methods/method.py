@@ -68,12 +68,14 @@ class Method(metaclass=AbstractRegisteringType):
     the method as a standalone object - to enable advanced users to customize methods).
     """
 
+    @abstract_property
     def help(self):
         """Return string providing help for this method.
 
         The help message shows up when `./run method_name -h`.
+        Use help = __doc__
         """
-        pass
+        return ''
 
     @abstract_property
     def name(self):
