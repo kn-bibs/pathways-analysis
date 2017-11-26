@@ -191,12 +191,14 @@ class GeneralisedGSEA(SimpleGSEA):
         self.database = database
         self.ranked_list_weight = ranked_list_weight
         self.calculate_rank = ranking_metric()
-        self.permutation_type = permutation_type
         self.normalize_es = normalize_es
         self.processes = processes
         self.permutations = permutations
         self.gene_sets = [s for s in self.database.gene_sets.values() if min_genes > len(s.genes) < max_genes]
         self.descending_sort = descending_sort
+
+        self.shuffler_class = self.shufflers[permutation_type]
+        self.shuffler = None
         # TODO: p-value, fdr cutoff
 
     def run(self, experiment: Experiment):
@@ -209,8 +211,13 @@ class GeneralisedGSEA(SimpleGSEA):
             experiment.case, experiment.control
         )
         # gene_set is S in the publication
+        self.shuffler = self.shuffler_class(
+            experiment,
+            self.create_ranked_gene_list,
+            self.calculate_enrichment_score,
+        )
 
-        args = (ranked_list, experiment)
+        args = (ranked_list, )
 
         pool = multiprocess.Pool(self.processes)
         gene_sets = pool.map(self.analyze_gene_set, self.gene_sets, shared_args=args)
@@ -221,12 +228,12 @@ class GeneralisedGSEA(SimpleGSEA):
 
         return GSEAResult(sorted_gene_sets)
 
-    def analyze_gene_set(self, gene_set: GeneSet, ranked_list, experiment):
+    def analyze_gene_set(self, gene_set: GeneSet, ranked_list):
         # 1. step in the publication (Calculation of an Enrichment Score)
         enrichment_score = self.calculate_enrichment_score(ranked_list, gene_set)
 
         # 2. step in the publication (Estimation of Significance Level of ES)
-        null_distribution = self.enrichments_for_permuted_labels(gene_set, experiment)
+        null_distribution = self.enrichments_for_permuted_labels(gene_set)
         # significance level is a nominal p-value here
         nominal_p_value = self.estimate_significance_level(enrichment_score, null_distribution)
 
@@ -305,11 +312,6 @@ class GeneralisedGSEA(SimpleGSEA):
         decrement = 1 / (n - nh)
 
         # weight, N_R
-        #hit_denominator = sum(
-        #    abs(pow(rank, p))
-        #    for gene, rank in ranked_list
-        #    if gene.name in gene_set
-        #)
         hit_denominator = 0
         for gene, rank in ranked_list:
             if gene.name in gene_set:
@@ -334,17 +336,13 @@ class GeneralisedGSEA(SimpleGSEA):
 
         return maximum_deviation
 
-    def enrichments_for_permuted_labels(self, gene_set, experiment):
+    def enrichments_for_permuted_labels(self, gene_set):
         """Create null distribution by repetitive permutations of gene labels"""
         # es_null is used to store a histogram representing null distribution
         es_null = ScoreDistribution()
 
-        shuffler = self.shufflers[self.permutation_type](
-            experiment,
-            gene_set,
-            self.create_ranked_gene_list,
-            self.calculate_enrichment_score,
-        )
+        shuffler = self.shuffler
+        shuffler.set_gene_set(gene_set)
 
         for score in range(self.permutations):
             score = shuffler.permute_and_score()
@@ -411,17 +409,24 @@ class GeneralisedGSEA(SimpleGSEA):
             observations = 0
 
             for other_set in analyzed_gene_sets:
-                # TODO:
-                # if other_set == gene_set: break?
+                if other_set == gene_set:
+                    continue
 
                 more_extreme_random += sum(
-                    1 if is_more_extreme(r, normalized_enrichment) else 0
-                    for r in other_set.null_distribution
+                    1 for random_enrichment in other_set.null_distribution
+                    if is_more_extreme(random_enrichment, normalized_enrichment)
                 )
                 all_random += len(other_set.null_distribution)
 
-                more_extreme_observed += 1 if is_more_extreme(other_set.enrichment, normalized_enrichment) else 0
+                if is_more_extreme(other_set.enrichment, normalized_enrichment):
+                    more_extreme_observed += 1
                 observations += 1
+
+            # this controls division by zero and provides a shortcut to quit if there are no results
+            if not more_extreme_random:
+                # TODO: less than
+                gene_set.fdr = 0
+                continue
 
             nominator = more_extreme_random / all_random
             denominator = more_extreme_observed / observations

@@ -22,7 +22,7 @@ class GeneSet:
     def __init__(self, name, genes, url=None):
         self.name = name
         # TODO: use objects, not name, though how to share objects?
-        self.genes = {Gene(name) for name in genes}
+        # self.genes = {Gene(name) for name in genes}
         self.genes = set(genes)
         self.url = url
         self.enrichment = None

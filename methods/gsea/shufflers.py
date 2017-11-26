@@ -14,11 +14,14 @@ def shuffle_and_divide(merged_collection, midpoint):
 class Shuffler(ABC):
 
     @abstractmethod
-    def __init__(self, experiment: Experiment, gene_set: GeneSet, rank, score):
+    def __init__(self, experiment: Experiment, rank, score):
         self.experiment = experiment
-        self.gene_set = gene_set
         self.rank = rank
         self.score = score
+        self.gene_set = None
+
+    def set_gene_set(self, gene_set: GeneSet):
+        self.gene_set = gene_set
 
     @abstractmethod
     def permute_and_score(self):
@@ -27,8 +30,8 @@ class Shuffler(ABC):
 
 class PhenotypeShuffler(Shuffler):
 
-    def __init__(self, experiment: Experiment, gene_set: GeneSet, rank, score):
-        super().__init__(experiment, gene_set, rank, score)
+    def __init__(self, experiment: Experiment, rank, score):
+        super().__init__(experiment, rank, score)
         self.all_samples = experiment.case + experiment.control
         self.cases_cnt = len(experiment.case.samples)
 
@@ -41,8 +44,8 @@ class PhenotypeShuffler(Shuffler):
 
 class GeneShuffler(Shuffler):
 
-    def __init__(self, experiment: Experiment, gene_set: GeneSet, rank, score):
-        super().__init__(experiment, gene_set, rank, score)
+    def __init__(self, experiment: Experiment, rank, score):
+        super().__init__(experiment, rank, score)
         self.gene_labels = list(experiment.control.genes)
         self.permutation = copy(self.gene_labels)
 
