@@ -8,6 +8,8 @@ import numpy as np
 
 from declarative_parser.parser import action
 from declarative_parser.types import positive_int
+from utils import jit
+
 from methods.gsea import multiprocess
 from methods.gsea.shufflers import PhenotypeShuffler, GeneShuffler
 from methods.method import Method, MethodResult
@@ -74,7 +76,7 @@ class SimpleGSEA(Method):
         increment = sqrt(n - nh) / nh
         decrement = sqrt(nh / (n - nh))
 
-        for gene in ranked_list:
+        for gene, _ in ranked_list:
             if gene in gene_set:
                 running_sum_statistic += increment
             else:
@@ -83,6 +85,12 @@ class SimpleGSEA(Method):
                 maximum_deviation = running_sum_statistic
 
         return maximum_deviation
+
+
+@jit
+def is_more_extreme(x, enrichment):
+    """Is x more extreme (more negative or more positive) than provided enrichment?"""
+    return abs(x) > abs(enrichment)
 
 
 class GeneralisedGSEA(SimpleGSEA):
@@ -256,17 +264,15 @@ class GeneralisedGSEA(SimpleGSEA):
         # case/ control should be shuffled, not genes! this won't work for continuous
 
         # dict in 3.6 are ordered!
-        return {
-            gene: rank
-            for gene, rank in sorted(
-                [
-                    (map_label(gene), self.calculate_rank(case.of_gene(gene), control.of_gene(gene)))
-                    for gene in genes
-                ],
-                key=itemgetter(1)
-            )
-        }
+        return sorted(
+            [
+                (map_label(gene), self.calculate_rank(case.of_gene(gene), control.of_gene(gene)))
+                for gene in genes
+            ],
+            key=itemgetter(1)
+        )
 
+    @jit
     def calculate_enrichment_score(self, ranked_list, gene_set: GeneSet):
         # TODO: review of formulas more than welcome;
         # based on formulas from "Appendix: Mathematical Description of Methods"
@@ -283,13 +289,17 @@ class GeneralisedGSEA(SimpleGSEA):
         decrement = 1 / (n - nh)
 
         # weight, N_R
-        hit_denominator = sum(
-            abs(pow(rank, p))
-            for gene, rank in ranked_list.items()
-            if gene.name in gene_set
-        )
+        #hit_denominator = sum(
+        #    abs(pow(rank, p))
+        #    for gene, rank in ranked_list
+        #    if gene.name in gene_set
+        #)
+        hit_denominator = 0
+        for gene, rank in ranked_list:
+            if gene.name in gene_set:
+                hit_denominator += abs(pow(rank, p))
 
-        for gene, rank in ranked_list.items():
+        for gene, rank in ranked_list:
 
             power_of_rank = pow(rank, p)
 
@@ -327,6 +337,7 @@ class GeneralisedGSEA(SimpleGSEA):
         return es_null
 
     @staticmethod
+    @jit
     def estimate_significance_level(enrichment_score, null_distribution):
         """Estimate nominal p-value using only this side (tail) of null (random) distribution
 
@@ -372,10 +383,6 @@ class GeneralisedGSEA(SimpleGSEA):
         Args:
             analyzed_gene_sets: already analyzed gene sets
         """
-
-        def is_more_extreme(x, enrichment):
-            """Is x more extreme (more negative or more positive) than provided enrichment?"""
-            return abs(x) > abs(enrichment)
 
         for gene_set in analyzed_gene_sets:
 

@@ -6,6 +6,7 @@ import os
 
 from declarative_parser.parser import Argument, Parser, action
 from models import Gene
+from utils import jit
 
 REMOTE = 'https://github.com/kn-bibs/pathways-data/raw/master/gsea/msigdb/'
 DATA_DIR = Path('data')
@@ -19,11 +20,13 @@ class GeneSet:
 
     def __init__(self, name, genes, url=None):
         self.name = name
+        # TODO: use objects, not name, though how to share objects?
         self.genes = {Gene(name) for name in genes}
-        self.genes = genes
+        self.genes = set(genes)
         self.url = url
         self.enrichment = None
 
+    @jit
     def __contains__(self, item):
         # TODO test
         return item in self.genes

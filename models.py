@@ -134,6 +134,10 @@ class SampleCollection:
     def __init__(self, name, samples=None):
         self.samples: List[Sample] = samples or []
         self.name = name
+        # integrity check
+        # Raises AssertionError if there is inconsistency in genes in samples.
+        # genes = self.samples[0].genes
+        # assert all(sample.genes == genes for sample in self.samples[1:])
 
     @property
     def labels(self):
@@ -142,12 +146,8 @@ class SampleCollection:
     @property
     @lru_cache(maxsize=1)
     def genes(self):
-        """Return all genes present in the collection of samples.
-
-        Raises AssertionError if there is inconsistency in genes in samples.
-        """
+        """Return all genes present in the collection of samples."""
         genes = self.samples[0].genes
-        assert all(sample.genes == genes for sample in self.samples[1:])
         return genes
 
     @lru_cache(maxsize=None)
