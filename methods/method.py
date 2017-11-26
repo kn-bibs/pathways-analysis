@@ -68,7 +68,6 @@ class Method(metaclass=AbstractRegisteringType):
     the method as a standalone object - to enable advanced users to customize methods).
     """
 
-    @abstract_property
     def help(self):
         """Return string providing help for this method.
 
