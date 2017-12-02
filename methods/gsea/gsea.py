@@ -58,52 +58,18 @@ class ScoreDistribution:
         return len(self.positive_scores) + len(self.negative_scores)
 
 
-# TODO: JavaGSAE - wrapper for Desktop version from Broad?
-class SimpleGSEA(Method):
-    """Implementation of GSEA as described in:
-
-    Mootha, V. K., Lindgren, C. M., Eriksson, K. F., Subramanian, A., Sihag, S., Lehar, J.,
-    Puigserver, P., Carlsson, E., Ridderstrale, M., Laurila, E., et al. (2003) Nat. Genet. 34,
-    267–273.
-    """
-
-    help = __doc__
-    name = 'simple_gsea'
-
-    def run(self, experiment: Experiment) -> MethodResult:
-        # TODO: implement as a special case of GeneralisedGSEA
-        pass
-
-    def calculate_enrichment_score(self, ranked_list, gene_set):
-        # variable names were chosen to reflect description Supporting Text of GeneralisedGSEA
-
-        maximum_deviation = 0
-        running_sum_statistic = 0
-
-        n = len(ranked_list)
-        nh = len(gene_set)
-
-        increment = sqrt(n - nh) / nh
-        decrement = sqrt(nh / (n - nh))
-
-        for gene, _ in ranked_list:
-            if gene in gene_set:
-                running_sum_statistic += increment
-            else:
-                running_sum_statistic -= decrement
-            if abs(running_sum_statistic) > abs(maximum_deviation):
-                maximum_deviation = running_sum_statistic
-
-        return maximum_deviation
-
-
 @jit
 def is_more_extreme(x, enrichment):
     """Is x more extreme (more negative or more positive) than provided enrichment?"""
     return abs(x) > abs(enrichment)
 
 
-class GeneralisedGSEA(SimpleGSEA):
+class JavaGSEA(Method):
+    # TODO: create wrapper for Desktop version from Broad Institute
+    pass
+
+
+class GeneralisedGSEA(Method):
     """
     GSEA method evaluates list of provided gene sets,
     looking for such gene sets which are significantly
@@ -471,4 +437,43 @@ class GeneralisedGSEA(SimpleGSEA):
         # http://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/FAQ#What_does_it_mean_for_a_gene_set_to_have_NES_and_nominal_p-values_of_NaN_.28also_shown_as_blanks.29.3F
 
         return normalized(enrichment_score), normalized_null
+
+
+class SimpleGSEA(GeneralisedGSEA):
+    """Implementation of GSEA as described in:
+
+    Mootha, V. K., Lindgren, C. M., Eriksson, K. F., Subramanian, A., Sihag, S., Lehar, J.,
+    Puigserver, P., Carlsson, E., Ridderstrale, M., Laurila, E., et al. (2003) Nat. Genet. 34,
+    267–273.
+
+    NOT TESTED
+    """
+
+    help = __doc__
+    name = 'simple_gsea'
+
+    database = DatabaseParser()
+
+    # TODO: test this
+    def calculate_enrichment_score(self, ranked_list, gene_set):
+        # variable names were chosen to reflect description Supporting Text of GeneralisedGSEA
+
+        maximum_deviation = 0
+        running_sum_statistic = 0
+
+        n = len(ranked_list)
+        nh = len(gene_set)
+
+        increment = sqrt(n - nh) / nh
+        decrement = sqrt(nh / (n - nh))
+
+        for gene, _ in ranked_list:
+            if gene in gene_set:
+                running_sum_statistic += increment
+            else:
+                running_sum_statistic -= decrement
+            if abs(running_sum_statistic) > abs(maximum_deviation):
+                maximum_deviation = running_sum_statistic
+
+        return maximum_deviation
 
