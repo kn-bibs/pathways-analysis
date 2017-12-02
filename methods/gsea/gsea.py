@@ -59,7 +59,6 @@ class ScoreDistribution:
 
 
 # TODO: JavaGSAE - wrapper for Desktop version from Broad?
-# TODO: Simple GSEA is not a leaf thus it is skipped by metaclass
 class SimpleGSEA(Method):
     """Implementation of GSEA as described in:
 
@@ -68,6 +67,7 @@ class SimpleGSEA(Method):
     267–273.
     """
 
+    help = __doc__
     name = 'simple_gsea'
 
     def run(self, experiment: Experiment) -> MethodResult:
