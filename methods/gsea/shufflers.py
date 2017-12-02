@@ -1,13 +1,14 @@
 from abc import ABC, abstractmethod
 from copy import copy
-from random import shuffle
+from numpy.random import shuffle
 
 from methods.gsea.signatures import GeneSet
 from models import SampleCollection, Experiment
 
 
 def shuffle_and_divide(merged_collection, midpoint):
-    shuffled = shuffle(merged_collection.samples)
+    shuffled = copy(merged_collection.samples)
+    shuffle(shuffled)
     return SampleCollection(shuffled[:midpoint]), SampleCollection(shuffled[midpoint:])
 
 

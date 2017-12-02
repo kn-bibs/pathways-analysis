@@ -137,21 +137,31 @@ class GeneralisedGSEA(Method):
         default=SignalToNoise
     )
 
-    # TODO: metrics
-    def __init__(self, database, ranked_list_weight: float=1, ranking_metric=SignalToNoise,
-                 permutation_type='genes', normalize_es=True,
-                 processes: positive_int=0, permutations: positive_int=1000, min_genes=15,
-                 max_genes=500, descending_sort=True, **kwargs):
+    permutation_type = Argument(
+        type=lambda name: GeneralisedGSEA.shufflers[name],
+        choices=list(shufflers.keys()),
+        default=GeneShuffler,
+        help="'genes' or 'phenotypes' (one of shufflers)"
+    )
+
+    def __init__(
+        self, database, ranked_list_weight: float=1, ranking_metric=SignalToNoise,
+        permutation_type=GeneShuffler, normalize_es=True,
+        processes: positive_int=0, permutations: positive_int=1000,
+        min_genes: positive_int=15, max_genes: positive_int=500,
+        descending_sort=True, **kwargs
+    ):
         """
 
         Args:
             database: Database or object with database property.
             ranked_list_weight:
                 an enrichment weighting exponent (p in publication)
-                to control weight
-                of producing ranked list, default 1
-            permutation_type: 'genes' or 'phenotypes' (one of shufflers)
-            permutations: count of permutation rounds to execute (the more, the mor accurate is pvalue estimation)
+                to control weight of producing ranked list, default 1
+            permutation_type: a subclass of Shuffler
+            permutations:
+                count of permutation rounds to execute
+                (the more, the more accurate is p-value estimation)
             normalize_es: should enrichment scores be normalized (adjusting for variation in gene sets)?
             processes: a number of processes to use; by default all available cores will be utilized
 
@@ -165,10 +175,13 @@ class GeneralisedGSEA(Method):
         self.normalize_es = normalize_es
         self.processes = processes
         self.permutations = permutations
-        self.gene_sets = [s for s in self.database.gene_sets.values() if min_genes > len(s.genes) < max_genes]
+        self.gene_sets = [
+            s for s in self.database.gene_sets.values()
+            if min_genes > len(s.genes) < max_genes
+        ]
         self.descending_sort = descending_sort
 
-        self.shuffler_class = self.shufflers[permutation_type]
+        self.shuffler_class = permutation_type
         self.shuffler = None
         # TODO: p-value, fdr cutoff
 
