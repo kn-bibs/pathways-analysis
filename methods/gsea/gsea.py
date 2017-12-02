@@ -1,5 +1,4 @@
 import random
-from collections import UserList
 from itertools import chain
 from math import sqrt
 from operator import itemgetter
@@ -8,7 +7,7 @@ from typing import List, Iterable
 
 import numpy as np
 
-from declarative_parser.parser import action
+from declarative_parser.parser import action, Argument
 from declarative_parser.types import positive_int
 from utils import jit
 
@@ -16,7 +15,7 @@ from methods.gsea import multiprocess
 from methods.gsea.shufflers import PhenotypeShuffler, GeneShuffler
 from methods.method import Method, MethodResult
 from models import Experiment, SampleCollection
-from .metrics import SignalToNoise
+from .metrics import SignalToNoise, ranking_metrics
 from .signatures import DatabaseParser, GeneSet
 
 
@@ -165,6 +164,12 @@ class GeneralisedGSEA(SimpleGSEA):
     database = DatabaseParser()
 
     shufflers = {'phenotypes': PhenotypeShuffler, 'genes': GeneShuffler}
+
+    ranking_metric = Argument(
+        type=lambda name: ranking_metrics[name],
+        choices=list(ranking_metrics.keys()),
+        default=SignalToNoise
+    )
 
     # TODO: metrics
     def __init__(self, database, ranked_list_weight: float=1, ranking_metric=SignalToNoise,
