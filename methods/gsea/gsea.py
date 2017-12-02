@@ -11,7 +11,7 @@ from declarative_parser.parser import action, Argument
 from declarative_parser.types import positive_int
 from utils import jit
 
-from methods.gsea import multiprocess
+import multiprocess
 from methods.gsea.shufflers import PhenotypeShuffler, GeneShuffler
 from methods.method import Method, MethodResult
 from models import Experiment, SampleCollection
@@ -191,7 +191,7 @@ class GeneralisedGSEA(Method):
         args = (ranked_list, )
 
         pool = multiprocess.Pool(self.processes)
-        gene_sets = pool.map(self.analyze_gene_set, self.gene_sets, shared_args=args)
+        gene_sets = pool.imap(self.analyze_gene_set, self.gene_sets, shared_args=args)
 
         sorted_gene_sets = sorted(gene_sets)
 
