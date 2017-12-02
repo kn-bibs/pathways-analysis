@@ -9,9 +9,12 @@ from models import SampleCollection, Sample, Gene
 
 
 def create_test_db():
+    sets = [
+        GeneSet('anthrax pathway', ['MAP2K2', 'MAP2K1']),
+        GeneSet('p53 pathway', ['MDM2', 'TP53'])
+    ]
     return MolecularSignatureDatabase({
-        'anthrax pathway': GeneSet('MAP2K2', 'MAP2K1'),
-        'p53 pathway': GeneSet('MDM2', 'TP53')
+        s.name: s for s in sets
     })
 
 
@@ -22,6 +25,11 @@ def test_database(capsys):
 
     db = create_test_db()
     assert len(db.gene_sets) == 2
+
+
+def test_gene_set():
+    gene_set = GeneSet('set', ['MDM2', 'TP53'])
+    assert Gene('TP53') in gene_set
 
 
 def test_licence(capsys):

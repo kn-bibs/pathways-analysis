@@ -7,6 +7,17 @@ def test_gene_init():
     gene = Gene('BAD')
     assert gene.name == 'BAD'
 
+    same = Gene('BAD')
+    assert same == gene
+    assert same is gene
+
+    g = Gene('TP53', 'Tumour suppressor p53')
+    assert g.name == 'TP53'
+    assert g.description == 'Tumour suppressor p53'
+
+    from copy import copy
+    assert copy(g).id is g.id
+
 
 def test_sample_init():
     genes = {Gene('BAD'): 1.2345, Gene('FUCA2'): 6.5432}

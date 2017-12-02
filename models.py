@@ -21,17 +21,22 @@ class Gene:
     """
 
     instances = {}
+    __slots__ = ('name', 'description', 'id')
 
     def __new__(cls, *args, **kwargs):
         if not args:
             # for pickling the requirements are lessened
             # ONLY for pickling
             return super(Gene, cls).__new__(cls)
+
         name = args[0]
+
         if name not in cls.instances:
-            cls.instances[name] = super(Gene, cls).__new__(cls)
-            # TODO: test for description & name
-            cls.instances[name].__init__(*args, **kwargs)
+            gene = super(Gene, cls).__new__(cls)
+            gene.__init__(*args, **kwargs)
+            gene.id = len(cls.instances) - 1
+            cls.instances[name] = gene
+
         return cls.instances[name]
 
     def __init__(self, name, description=None):

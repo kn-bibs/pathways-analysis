@@ -21,15 +21,21 @@ class GeneSet:
 
     def __init__(self, name, genes, url=None):
         self.name = name
-        # TODO: use objects, not name, though how to share objects?
-        # self.genes = {Gene(name) for name in genes}
-        self.genes = set(genes)
+        self.genes = {Gene(name) for name in genes}
         self.url = url
         self.enrichment = None
 
-    def __contains__(self, item):
-        # TODO test
-        return item in self.genes
+        # Following is meant to enable fast __contains__ test:
+        # granted, one might want to simply use memory address
+        # retrieved with id(gene) but it is not guaranteed to
+        # (and will not) work with multiprocessing.
+        # On the other hand a set of integers is easily pick-able,
+        # as is the integer-holding 'id' attribute of Gene(s).
+        # Trivia: set(list-comprehension) is faster than set(generator).
+        self.gene_ids = set([gene.id for gene in self.genes])
+
+    def __contains__(self, gene: Gene):
+        return gene.id in self.gene_ids
 
     def __len__(self):
         return len(self.genes)

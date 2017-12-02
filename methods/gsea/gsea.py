@@ -285,7 +285,7 @@ class GeneralisedGSEA(Method):
         # weight, N_R
         hit_denominator = 0
         for gene, rank in ranked_list:
-            if gene.name in gene_set:
+            if gene in gene_set:
                 hit_denominator += abs(pow(rank, p))
 
         for gene, rank in ranked_list:
@@ -293,7 +293,7 @@ class GeneralisedGSEA(Method):
             power_of_rank = pow(rank, p)
 
             # hit
-            if gene.name in gene_set:
+            if gene in gene_set:
                 increment = power_of_rank / hit_denominator
                 running_sum_statistic_hits += increment
             # miss
