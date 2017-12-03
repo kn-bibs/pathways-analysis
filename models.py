@@ -376,7 +376,7 @@ class SampleCollection:
         )
 
         # if user did not choose a subset of samples
-        if not (kwargs['columns_selector'] or kwargs['samples']):
+        if not any(key in kwargs for key in ['samples', 'columns_selector']):
             # check if the samples numbers are ok
             if len(self.samples) != samples_count:
                 warn(

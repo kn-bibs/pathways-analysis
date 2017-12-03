@@ -1,4 +1,4 @@
-from models import Gene, Sample, SampleCollection
+from models import Gene, Sample
 
 # TODO method for creating samples faster
 
@@ -40,16 +40,3 @@ def test_sample_from_names():
     assert all(isinstance(v, float) for v in sample.data.values())
     assert list(sample.data.values()) == [1.2345, 6.5432]
 
-
-def test_sample_collection_init():
-    genes1 = {Gene('BAD'): 1.2345, Gene('FUCA2'): 6.5432}
-    genes2 = {Gene('BAD'): 2.3456, Gene('FUCA2'): 7.6543}
-
-    samples = [Sample('Tumour_1', genes1), Sample('Tumour_2', genes2)]
-
-    sample_collection = SampleCollection('Tumour', samples)
-
-    assert sample_collection.name == 'Tumour'
-    assert all(isinstance(k, Sample) for k in sample_collection.samples)
-
-# TODO test rest of sample_collection methods
