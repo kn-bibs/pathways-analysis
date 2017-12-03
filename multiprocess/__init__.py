@@ -1,12 +1,16 @@
 from collections import namedtuple
 from contextlib import contextmanager
+import os
 from multiprocessing import Manager, Queue, Process
 from multiprocessing.managers import ListProxy
 
 from multiprocess.progress_bar import progress_bar
 from multiprocess.signals import STOP
 from utils import tqdm
-from utils import available_cores
+
+
+def available_cores():
+    return len(os.sched_getaffinity(0))
 
 
 def worker(func, input: Queue, progress_bar_updates: Queue, output: ListProxy, *args):

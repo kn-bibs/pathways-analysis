@@ -1,6 +1,5 @@
 from abc import ABCMeta, abstractmethod
 
-import os
 
 try:
     from numba import jit
@@ -30,8 +29,3 @@ class AbstractRegisteringType(ABCMeta):
 
 def abstract_property(method):
     return property(abstractmethod(method))
-
-
-def available_cores():
-    # TODO test returns int
-    return len(os.sched_getaffinity(0))
