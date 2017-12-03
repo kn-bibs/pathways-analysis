@@ -3,7 +3,8 @@ from itertools import chain
 from math import sqrt
 from operator import itemgetter
 from textwrap import dedent
-from typing import List, Iterable
+from typing import List, Iterable, Sequence
+from warnings import warn
 
 import numpy as np
 
@@ -149,7 +150,7 @@ class GeneralisedGSEA(Method):
         permutation_type=GeneShuffler, normalize_es=True,
         processes: positive_int=0, permutations: positive_int=1000,
         min_genes: positive_int=15, max_genes: positive_int=500,
-        descending_sort=True, **kwargs
+        descending_sort=True, match_gene_set=None, **kwargs
     ):
         """
 
@@ -164,7 +165,7 @@ class GeneralisedGSEA(Method):
                 (the more, the more accurate is p-value estimation)
             normalize_es: should enrichment scores be normalized (adjusting for variation in gene sets)?
             processes: a number of processes to use; by default all available cores will be utilized
-
+            match_gene_set: a string for restricting gene sets by partial name match, useful for debugging
         """
         # TODO: store opts in a dict?
         if hasattr(database, 'database'):
@@ -176,24 +177,76 @@ class GeneralisedGSEA(Method):
         self.processes = processes
         self.permutations = permutations
         self.gene_sets = [
-            s for s in self.database.gene_sets.values()
-            if min_genes > len(s.genes) < max_genes
+            gene_set for gene_set in self.database.gene_sets.values()
+            if not match_gene_set or match_gene_set in gene_set.name
         ]
+        self.min_max = min_genes, max_genes
         self.descending_sort = descending_sort
 
         self.shuffler_class = permutation_type
         self.shuffler = None
         # TODO: p-value, fdr cutoff
 
-    def run(self, experiment: Experiment):
+    def trim_gene_sets(self, gene_sets: Sequence[GeneSet], experiment: Experiment) -> Sequence[GeneSet]:
+        """Clear gene_sets of genes absent in expression dataset of experiment
+
+        and remove those gene_sets that have less than min/max genes.
+
+        Behaviour as documented in GSEA FAQ:
+            http://software.broadinstitute.org/cancer/software/gsea/wiki/index.php/FAQ#Can_GSEA_analyze_a_gene_set_that_contains_genes_that_are_not_in_my_expression_dataset.3F
+        """
+        trimmed = []
+        genes = experiment.case.genes
+        min_genes, max_genes = self.min_max
+
+        all_removed = set()
+
+        for gene_set in gene_sets:
+            removed = gene_set.restrict_to_genes(genes)
+            all_removed.update(removed)
+
+            if len(gene_set) == len(genes):
+                warn(f'{gene_set.name} has as many genes as the expression dataset')
+
+            if min_genes <= len(gene_set) <= max_genes:
+                trimmed.append(gene_set)
+
+            if len(gene_set) > len(genes):
+                assert False
+
+        diff = len(gene_sets) - len(trimmed)
+
+        print(
+            f'Trimmed out {len(all_removed)} genes from gene sets '
+            f'which are absent in provided expression dataset; '
+            f'Excluded {diff} datasets as having less than '
+            f'{min_genes} or more than {max_genes} genes.'
+        )
+        return trimmed
+
+    def sanity_check(self, experiment: Experiment):
+
+        if len(experiment.case.genes) < self.min_max[0]:
+            warn(
+                'You set the minimal number of genes to be higher than '
+                'the actual number of genes in your expression '
+                'dataset. Are you sure that it is what you want?'
+            )
+
+    def run(self, experiment: Experiment) -> GSEAResult:
         """Return list of gene sets sorted by normalized enrichment score.
 
         Each gene set in the list has FDR and enrichment_score assigned."""
+
+        self.sanity_check(experiment)
+
+        gene_sets = self.trim_gene_sets(self.gene_sets, experiment)
 
         # L in the Subramanian2005 publication
         ranked_list = self.create_ranked_gene_list(
             experiment.case, experiment.control
         )
+
         # gene_set is S in the publication
         self.shuffler = self.shuffler_class(
             experiment,
@@ -204,7 +257,7 @@ class GeneralisedGSEA(Method):
         args = (ranked_list, )
 
         pool = multiprocess.Pool(self.processes)
-        gene_sets = pool.imap(self.analyze_gene_set, self.gene_sets, shared_args=args)
+        gene_sets = pool.imap(self.analyze_gene_set, gene_sets, shared_args=args)
 
         sorted_gene_sets = sorted(gene_sets)
 
@@ -260,21 +313,19 @@ class GeneralisedGSEA(Method):
 
         genes = case.genes
 
-        if not labels_map:
-            def map_label(gene):
-                return gene
-        else:
-            def map_label(gene):
-                return labels_map[gene]
-
-        # case/ control should be shuffled, not genes! this won't work for continuous
-
-        # dict in 3.6 are ordered!
-        return sorted(
-            [
-                (map_label(gene), self.calculate_rank(case.of_gene(gene), control.of_gene(gene)))
+        if labels_map:
+            ranked = [
+                (labels_map[gene], self.calculate_rank(case.of_gene(gene), control.of_gene(gene)))
                 for gene in genes
-            ],
+            ]
+        else:
+            ranked = [
+                (gene, self.calculate_rank(case.of_gene(gene), control.of_gene(gene)))
+                for gene in genes
+            ]
+
+        return sorted(
+            ranked,
             key=itemgetter(1),
             reverse=self.descending_sort
         )
@@ -301,12 +352,31 @@ class GeneralisedGSEA(Method):
             if gene in gene_set:
                 hit_denominator += abs(pow(rank, p))
 
-        for gene, rank in ranked_list:
+        if not hit_denominator:
+            # this means that ranks of all genes with are present
+            # in this gene_set are 0 (e.g. there is no difference
+            # in expression between case/control). This is a very
+            # artificial situation, but possible. There are two
+            # options: return 0 or set hit_denominator to anything
+            # and continue (the value - if not zero - does not matter,
+            # the nominator is always zero). If we set hit_denominator
+            # to zero, the enrichment score will be 0 or negative due
+            # to misses, which does not appear to be a reasonable choice;
+            # on the other hand returning 0 clearly shows that the
+            # expression did not change (with respect to given metric).
+            warn(
+                'Enrichment score of zero may indicate low '
+                'variability/precision of expression dataset '
+                'or an attempt to use the same set of samples '
+                'for both: case and control'
+            )
+            return 0
 
-            power_of_rank = pow(rank, p)
+        for gene, rank in ranked_list:
 
             # hit
             if gene in gene_set:
+                power_of_rank = pow(rank, p)
                 increment = power_of_rank / hit_denominator
                 running_sum_statistic_hits += increment
             # miss
@@ -335,7 +405,7 @@ class GeneralisedGSEA(Method):
         return es_null
 
     @staticmethod
-    @jit
+    # @jit  # TypeError: can't unbox heterogenous list bug
     def estimate_significance_level(enrichment_score, null_distribution: ScoreDistribution):
         """Estimate nominal p-value using only this side (tail) of null (random) distribution
 
@@ -417,13 +487,13 @@ class GeneralisedGSEA(Method):
 
             gene_set.fdr = nominator / denominator if denominator else None
 
-    def normalize_enrichment(self, enrichment_score: float, null_distribution: ScoreDistribution):
+    def normalize_enrichment(self, enrichment_score: float, null_distribution: ScoreDistribution) -> (float, ScoreDistribution):
         """Normalize enrichment by dividing be mean.
 
         See: Multiple Hypothesis Testing, point 3 in publication.
         """
         if not self.normalize_es:
-            return null_distribution, enrichment_score
+            return enrichment_score, null_distribution
 
         null_positive = null_distribution.positive_scores
         null_negative = null_distribution.negative_scores
@@ -433,15 +503,19 @@ class GeneralisedGSEA(Method):
 
         mean_negative_abs = abs(mean_negative) if mean_negative else None
 
+        # following line causes cProfile to fail during profiling,
+        # though it works in casual settings
+        # @jit
         def normalized(score):
             if score > 0:
-                score /= mean_positive
+                return score / mean_positive
+            elif score < 0:
+                return score / mean_negative_abs
             else:
-                score /= mean_negative_abs
-            return score
+                return 0
 
         normalized_null = ScoreDistribution(
-            (normalized(raw_score) for raw_score in null_distribution)
+            normalized(raw_score) for raw_score in null_distribution
         )
 
         # TODO: what if mean_negative_abs is None but score is negative?

@@ -1,6 +1,6 @@
 import gzip
 from pathlib import Path
-from typing import Mapping
+from typing import Mapping, Sequence
 from urllib.request import urlretrieve
 
 import os
@@ -33,6 +33,19 @@ class GeneSet:
         # as is the integer-holding 'id' attribute of Gene(s).
         # Trivia: set(list-comprehension) is faster than set(generator).
         self.gene_ids = set([gene.id for gene in self.genes])
+
+    def restrict_to_genes(self, genes: Sequence[Gene]):
+        """Clear itself of genes which are not in the the provided list.
+
+        Returns: set of genes removed from the dataset
+        """
+        excessive_genes = self.genes.difference(genes)
+
+        for gene in excessive_genes:
+            self.genes.discard(gene)
+            self.gene_ids.discard(gene.id)
+
+        return excessive_genes
 
     def __contains__(self, gene: Gene):
         return gene.id in self.gene_ids
