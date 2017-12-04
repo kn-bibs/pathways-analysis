@@ -1,6 +1,8 @@
 from contextlib import contextmanager
 from tempfile import TemporaryFile
 
+import pytest
+
 from models import Gene, Sample, SampleCollection
 
 
@@ -40,7 +42,11 @@ MDM2	na	42.11	55.5	44.81	39.32
 def test_from_gct():
     with temp_text_file(gct_contents) as gct_file:
 
-        collection = SampleCollection.from_gct_file('All samples', gct_file)
+        with pytest.warns(
+                UserWarning,
+                match='Samples count (4) does not match with the 3 declared in All samples file.'
+        ):
+            collection = SampleCollection.from_gct_file('All samples', gct_file)
 
         assert len(collection.samples) == 4
 
