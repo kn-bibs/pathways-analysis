@@ -16,7 +16,7 @@ import multiprocess
 from methods.gsea.shufflers import PhenotypeShuffler, GeneShuffler
 from methods.method import Method, MethodResult
 from models import Experiment, SampleCollection
-from .metrics import SignalToNoise, ranking_metrics
+from .metrics import signal_to_noise, RANKING_METRICS
 from .signatures import DatabaseParser, GeneSet
 
 
@@ -86,7 +86,7 @@ class GeneralisedGSEA(Method):
     Schematic of pipeline:
         1. Ranked list of genes present in provided samples is created,
            with the ranking based on differential expression (using
-           user-chosen ranking metric, default SignalToNoise).
+           user-chosen ranking metric, default signal_to_noise).
         2. For each set of genes:
             - enrichment score is calculated,
               using KS-test-like walking sum statistic;
@@ -133,9 +133,9 @@ class GeneralisedGSEA(Method):
     shufflers = {'phenotypes': PhenotypeShuffler, 'genes': GeneShuffler}
 
     ranking_metric = Argument(
-        type=lambda name: ranking_metrics[name],
-        choices=list(ranking_metrics.keys()),
-        default=SignalToNoise
+        type=lambda name: RANKING_METRICS[name],
+        choices=list(RANKING_METRICS.keys()),
+        default=signal_to_noise
     )
 
     permutation_type = Argument(
@@ -146,7 +146,7 @@ class GeneralisedGSEA(Method):
     )
 
     def __init__(
-        self, database, ranked_list_weight: float=1, ranking_metric=SignalToNoise,
+        self, database, ranked_list_weight: float=1, ranking_metric=signal_to_noise,
         permutation_type=GeneShuffler, normalize_es=True,
         processes: positive_int=0, permutations: positive_int=1000,
         min_genes: positive_int=15, max_genes: positive_int=500,
@@ -172,7 +172,7 @@ class GeneralisedGSEA(Method):
             database = database.database
         self.database = database
         self.ranked_list_weight = ranked_list_weight
-        self.calculate_rank = ranking_metric()
+        self.calculate_rank = ranking_metric
         self.normalize_es = normalize_es
         self.processes = processes
         self.permutations = permutations

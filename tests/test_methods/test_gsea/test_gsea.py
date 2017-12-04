@@ -6,7 +6,7 @@ from test_command_line.utilities import parsing_output
 
 from methods.gsea import GeneralisedGSEA
 from methods.gsea.gsea import ScoreDistribution
-from methods.gsea.metrics import DifferenceOfClasses
+from methods.gsea.metrics import difference_of_classes
 from methods.gsea.signatures import MolecularSignatureDatabase, GeneSet
 from models import SampleCollection, Sample, Gene, Experiment
 
@@ -94,7 +94,7 @@ def test_ranked_list():
     db = create_test_db()
     tp53, map2k1, case, control = minimal_data()
 
-    gsea = GeneralisedGSEA(database=db, ranking_metric=DifferenceOfClasses)
+    gsea = GeneralisedGSEA(database=db, ranking_metric=difference_of_classes)
 
     assert gsea.create_ranked_gene_list(case, control) == [(tp53, 1), (map2k1, 0)]
 
@@ -131,7 +131,7 @@ def test_run():
 
     gsea = GeneralisedGSEA(
         db,
-        ranking_metric=DifferenceOfClasses,
+        ranking_metric=difference_of_classes,
         min_genes=1,
         processes=1
     )

@@ -1,59 +1,82 @@
-from abc import ABC, abstractmethod
-from functools import lru_cache
-
-from numpy import mean, std
-
-from utils import jit, abstract_property
-
-
 # TODO metrics for continuous phenotypes
+from inspect import signature
+from functools import lru_cache
+from typing import Iterable
+
+from numpy import mean
+from statistics import stdev
+# for population/biased standard deviation use:
+# from numpy import std as stdev
+
+from utils import jit
 
 
-class DifferentialExpressionMetric(ABC):
-    # TODO: metrics could implemented as be standalone functions or builders
-
-    @abstract_property
-    def name(self):
-        pass
-
-    @abstractmethod
-    def __call__(self, expression_profile, control_profile):
-        pass
+RANKING_METRICS = {}
 
 
-class DifferenceOfClasses(DifferentialExpressionMetric):
+def differential_expression_metric(case: Iterable[float], control: Iterable[float]):
+    """Template for differential-expression metrics.
 
-    name = 'difference'
-
-    def __call__(self, expression_profile, control_profile):
-        return mean(expression_profile) - mean(control_profile)
-
-
-class RatioOfClasses(DifferentialExpressionMetric):
-
-    name = 'ratio'
-
-    def __call__(self, expression_profile, control_profile):
-        return mean(expression_profile) / mean(control_profile)
+    Args:
+        case: expression profile of the first class of samples
+        control:  expression profile of the second class of samples
+    """
+    pass
 
 
-class SignalToNoise(DifferentialExpressionMetric):
+def metric(name):
+    """Decorates differential-expression metric.
 
-    name = 'signal_to_noise'
+    Args:
+        name: user-visible name of the metric
+    """
+    def decorator(func):
+        func.name = name
 
-    @lru_cache(maxsize=None)
-    @jit
-    def __call__(self, case, control):
-        # TODO check for zero division?
+        func_signature = signature(func)
+        typed_signature = signature(differential_expression_metric)
 
-        return (
-            (mean(case) - mean(control))
-            /
-            (std(case) + std(control))
-        )
+        # check only names and count of parameters
+        if func_signature.parameters.keys() != typed_signature.parameters.keys():
+            raise NameError(
+                f'Signature of "{name}" metric does not match '
+                f'the template: {typed_signature}'
+            )
+
+        # replace signature to have type annotation
+        func.__signature__ = typed_signature
+
+        # save the metric
+        RANKING_METRICS[name] = func
+        return func
+
+    return decorator
 
 
-ranking_metrics = {
-    metric.name: metric
-    for metric in (DifferenceOfClasses, RatioOfClasses, SignalToNoise)
-}
+@metric('difference')
+def difference_of_classes(case, control):
+    return mean(case) - mean(control)
+
+
+@metric('ratio')
+def ratio_of_classes(case, control):
+    return mean(case) / mean(control)
+
+
+@metric('signal_to_noise')
+@lru_cache(maxsize=None)
+@jit
+def signal_to_noise(case, control):
+    """Calculates SNR as ratio of means difference and deviation sum.
+
+    Case and control has to be tuples or other hashable iterable.
+
+    Assumes that there are:
+        - at least two samples in both case and control
+        - the samples have non-zero variation
+    """
+    return (
+        (mean(case) - mean(control))
+        /
+        (stdev(case) + stdev(control))
+    )
