@@ -136,7 +136,7 @@ class SampleCollection:
         The common characteristic for these samples is that both are controls.
     """
 
-    def __init__(self, name, samples=None):
+    def __init__(self, name: str, samples=None):
         self.samples: List[Sample] = samples or []
         self.name = name
         # integrity check

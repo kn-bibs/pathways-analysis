@@ -9,7 +9,10 @@ from models import SampleCollection, Experiment
 def shuffle_and_divide(merged_collection, midpoint):
     shuffled = copy(merged_collection.samples)
     shuffle(shuffled)
-    return SampleCollection(shuffled[:midpoint]), SampleCollection(shuffled[midpoint:])
+    return (
+        SampleCollection('Random collection', shuffled[:midpoint]),
+        SampleCollection('Random collection', shuffled[midpoint:])
+    )
 
 
 class Shuffler(ABC):

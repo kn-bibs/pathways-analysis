@@ -99,6 +99,20 @@ def test_ranked_list():
     assert gsea.create_ranked_gene_list(case, control) == [(tp53, 1), (map2k1, 0)]
 
 
+def test_shuffle_samples():
+    from methods.gsea.shufflers import shuffle_and_divide
+
+    tp53, map2k1, case, control = minimal_data()
+
+    merged_collection = case + control
+
+    numpy.random.seed(0)
+    new_case, new_control = shuffle_and_divide(merged_collection, 1)
+
+    assert new_case.samples == control.samples
+    assert new_control.samples == case.samples
+
+
 def test_run():
     tp53, map2k1, case, control = minimal_data()
     experiment = Experiment(case, control)
