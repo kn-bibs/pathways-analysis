@@ -7,12 +7,6 @@ except ImportError:
     def jit(func):
         return func
 
-try:
-    from tqdm import tqdm
-except ImportError:
-    def tqdm(iterable, **kwargs):
-        return iterable
-
 
 class AbstractRegisteringType(ABCMeta):
     """Register all subclass with `name` but without abstract methods."""
