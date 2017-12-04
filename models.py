@@ -395,16 +395,16 @@ class SampleCollection:
         return self
 
     @classmethod
-    def from_csv_file(cls, **kwargs):
+    def from_csv_file(cls, name, file_object, **kwargs):
         if 'delimiter' in kwargs:
             if kwargs['delimiter'] != ',':
-                raise Warning(
+                warn(
                     'You are using not comma delimiter for what looks like csv file. '
                     'Is this really the thing you want to do?'
                 )
         else:
             kwargs['delimiter'] = ','
-        return cls.from_file(**kwargs)
+        return cls.from_file(name, file_object, **kwargs)
 
 
 # TODO class variable with set of genes + method(s) for checking data integrity
