@@ -57,7 +57,7 @@ class GeneSet:
         return self.enrichment < other.enrichment
 
     def __repr__(self):
-        return f'<GeneSet: {self.name} with {len(self.genes)}>'
+        return f'<GeneSet: {self.name} with {len(self.genes)} genes>'
 
 
 class MolecularSignatureDatabase:

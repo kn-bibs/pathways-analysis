@@ -33,6 +33,7 @@ def test_database(capsys):
 def test_gene_set():
     gene_set = GeneSet('set', ['MDM2', 'TP53'])
     assert Gene('TP53') in gene_set
+    assert str(gene_set) == '<GeneSet: set with 2 genes>'
 
 
 def test_licence(capsys):
