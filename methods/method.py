@@ -1,4 +1,6 @@
 from abc import abstractmethod, ABC
+from typing import Iterable
+
 from models import Experiment
 from utils import AbstractRegisteringType, abstract_property
 
@@ -18,8 +20,11 @@ class MethodResult(ABC):
     """
 
     @abstract_property
-    def columns(self):
-        pass
+    def columns(self) -> Iterable:
+        """List with attributes of objects from `scored_list`,
+
+        which will be used for summary table generation as columns.
+        """
 
     def __init__(self, scored_list, files=None, description=''):
         self.scored_list = scored_list
@@ -69,21 +74,19 @@ class Method(metaclass=AbstractRegisteringType):
     """
 
     @abstract_property
-    def help(self):
+    def help(self) -> str:
         """Return string providing help for this method.
 
         The help message shows up when `./run method_name -h`.
         Use help = __doc__
         """
-        return ''
 
     @abstract_property
-    def name(self):
+    def name(self)-> str:
         """Return method name used internally and in command line interface.
 
         The name should not include any spaces."""
-        pass
 
     @abstractmethod
     def run(self, experiment: Experiment) -> MethodResult:
-        pass
+        """Performs analysis and returns results object."""
