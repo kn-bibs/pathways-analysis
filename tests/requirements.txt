@@ -1,3 +1,4 @@
 pytest
 pytest-cov
 python-coveralls==2.8.0
+coveralls
