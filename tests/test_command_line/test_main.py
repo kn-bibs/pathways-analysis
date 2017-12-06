@@ -73,9 +73,17 @@ def create_files(tmpdir, files):
         file_object.write('\n'.join(lines))
 
 
+class DummyMethod(Method):
+    name = 'dummy'
+    help = ''
+
+    def run(self, experiment):
+        pass
+
+
 def p_parse(command_line):
     """Parse with prefix"""
-    prefix = 'gsea '
+    prefix = 'dummy '
     # as some method is always obligatory, each parser execution
     # will be prefixed with this method selection command
     try:
