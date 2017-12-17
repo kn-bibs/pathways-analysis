@@ -4,7 +4,11 @@ from statsmodels.stats.weightstats import ttest_ind
 from typing import Union
 
 
-def ttest_ind_phenotype(case: Union[SampleCollection, Sample], control: Union[SampleCollection, Sample], alternative="two-sided"):
+def ttest_ind_phenotype(
+        case: Union[SampleCollection, Sample],
+        control: Union[SampleCollection, Sample],
+        alternative: str="two-sided",
+):
     """
     Two sided t-test of case sample(s) and mean expression values in base samples across all genes
     Args:
@@ -19,5 +23,5 @@ def ttest_ind_phenotype(case: Union[SampleCollection, Sample], control: Union[Sa
              pvalue : float or numpy array in case of multiple case samples - pvalue of the t-test
              df : int or float - degrees of freedom used in the t-test
     """
-    l = [np.mean(row) for (idx, row) in control.as_array().iterrows()]
+    l = [np.mean(row) for (idx, row) in control.as_array().iterrows()]  # noqa: 741
     return ttest_ind(case.as_array(), l, alternative)

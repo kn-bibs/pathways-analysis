@@ -2,10 +2,9 @@ import argparse
 
 from methods import Method
 from models import SampleCollection, Experiment
-
+from .method_parser import MethodParser
 from .parser import Parser, Argument
 from .types import Slice, one_of, Indices, dsv, Range
-from .method_parser import MethodParser
 
 
 class SampleCollectionFactory(Parser):
@@ -297,4 +296,3 @@ class CLI(Parser):
         options.method = method_parser.method(**vars(method_options))
 
         return options
-

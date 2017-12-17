@@ -75,7 +75,7 @@ class DatabaseParser(Parser):
              'Please note that due to licencing restrictions data '
              'from following sources: '
              'KEGG, BioCarta and AAAS/STKE Cell Signaling Database '
-             'are currently unavailable.'
+             'are currently unavailable.'  # noqa: E203
         ,
     )
     version = Argument(

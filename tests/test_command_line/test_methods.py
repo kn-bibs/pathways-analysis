@@ -3,7 +3,6 @@ import pytest
 from command_line.parser import Argument
 from patapy import run
 from methods import Method
-from test_command_line.test_main import test_files
 from test_command_line.utilities import parse
 from test_command_line.utilities import parsing_output
 
@@ -93,7 +92,7 @@ def test_methods(capsys, test_files):
 def test_analyze_docstring():
 
     docstring = """Some docstring.
-    
+
     Arguments:
         my_arg: is an important argument
         active: should some feature be active
@@ -101,10 +100,10 @@ def test_analyze_docstring():
         spread:
             should be big or small?
             how big or how small?
-            
+
     Example:
         examples should not be interpreted as an argument
-    
+
     Returns:
         results
     """

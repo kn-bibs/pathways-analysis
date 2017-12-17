@@ -15,22 +15,22 @@ class GSEA(Method):
 
     help = """
     Expected results, based on abstract
-    
+
     Schematic of pipeline
-    
+
     Required args description
-    
+
     List of additional args?
-    
+
     Please refer & cite following publications:
         - Subramanian, Tamayo, et al. (2005, PNAS 102, 15545-15550)
         - Mootha, Lindgren, et al. (2003, Nat Genet 34, 267-273)
-        
+
     Please use --show_licence to display licence and copyright details.
     """
 
     legal_disclaimer = """
-        Molecular signature databases (MSigDB) are protected by 
+        Molecular signature databases (MSigDB) are protected by
         copyright (c) 2004-2017 Broad Institute, Inc., Massachusetts
         Institute of Technology, and Regents of the University of
         California, subject to the terms and conditions of the
@@ -64,6 +64,4 @@ class GSEA(Method):
         pass
 
     def calculate_rank(self):
-        #
         pass
-

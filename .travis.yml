@@ -11,6 +11,7 @@ install:
 
 
 script:
+ - flake8
  - bash run_tests.sh
 
 

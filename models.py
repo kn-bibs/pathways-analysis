@@ -1,7 +1,6 @@
 from typing import Callable, Mapping, Sequence
 from warnings import warn
 
-import numpy as np
 import pandas as pd
 
 
@@ -324,13 +323,15 @@ class Experiment:
     # TODO: are there many ways to compute fold-change?
     def get_fold_change(self, sample_from_case, use_log=False):
         assert sample_from_case in self.case.samples
+        raise NotImplementedError('implement calc_fold_change')
         # TODO: implement inline
-        calc_fold_change(sample_from_case, self.control, use_log=use_log)
+        # calc_fold_change(sample_from_case, self.control, use_log=use_log)
         """
         def fold_change(case, base, log2=False):
             fold_changes = case.copy()
             for (idx, row) in base.iterrows():
-                fold_changes.loc[[idx]] /= (np.mean(row) or 0.01)  # TODO for now arbitrary value 0.01 when 0's are found
+                # TODO for now arbitrary value 0.01 when 0's are found
+                fold_changes.loc[[idx]] /= (np.mean(row) or 0.01)
 
             if log2:
                 fold_changes = np.log2(fold_changes)  # TODO Runtime Warning when 0's are encountered
@@ -343,4 +344,3 @@ class Study:
     def __init__(self, cases: Sequence[SampleCollection], control: SampleCollection):
         for case in cases:
             self.experiments = Experiment(case, control)
-
