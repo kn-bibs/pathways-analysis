@@ -1,6 +1,35 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABC
+from typing import Iterable
+
 from models import Experiment
 from utils import AbstractRegisteringType, abstract_property
+
+
+class MethodResult(ABC):
+    """Result should contain list of matched pathways or processes
+
+    to be displayed in the results table. The result can include
+    additional information for the end user (in `description` field).
+
+    The names of properties of the items (pathways or processes) in
+    the list which should be used for table creation ought to be
+    enlisted in `columns` property.
+
+    Additional results created by a method should be presented in
+    `files` field of the result.
+    """
+
+    @abstract_property
+    def columns(self) -> Iterable:
+        """List with attributes of objects from `scored_list`,
+
+        which will be used for summary table generation as columns.
+        """
+
+    def __init__(self, scored_list, files=None, description=''):
+        self.scored_list = scored_list
+        self.files = files or []
+        self.description = description
 
 
 class Method(metaclass=AbstractRegisteringType):
@@ -12,7 +41,7 @@ class Method(metaclass=AbstractRegisteringType):
     For example::
 
         class MyMethod(Method)
-            def __init__(threshold:float=0.05):
+            def __init__(self, threshold: float=0.05):
                 pass
 
     For the simple arguments following information will be deduced:
@@ -35,7 +64,7 @@ class Method(metaclass=AbstractRegisteringType):
                 help='Path to file with the database'
             )
 
-            def __init__(threshold:float=0.05, database=None):
+            def __init__(self, threshold: float=0.05, database=None):
                 pass
 
     If help is given in both :class:`~command_line.parser.Argument` and docstring,
@@ -45,20 +74,19 @@ class Method(metaclass=AbstractRegisteringType):
     """
 
     @abstract_property
-    def help(self):
+    def help(self) -> str:
         """Return string providing help for this method.
 
         The help message shows up when `./run method_name -h`.
+        Use help = __doc__
         """
-        pass
 
     @abstract_property
-    def name(self):
+    def name(self)-> str:
         """Return method name used internally and in command line interface.
 
         The name should not include any spaces."""
-        pass
 
     @abstractmethod
-    def run(self, experiment: Experiment):
-        pass
+    def run(self, experiment: Experiment) -> MethodResult:
+        """Performs analysis and returns results object."""

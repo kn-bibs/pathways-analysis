@@ -34,9 +34,4 @@ Parsers are defined in :mod:`command_line.main` module.
 Creating custom arguments and parsers
 =====================================
 
-Please use :mod:`command_line.parser` module to create custom parsers and arguments.
-
-.. currentmodule:: command_line.parser
-
-.. automodule:: command_line.parser
-    :members:
+Please see declarative_parser module documentation for instructions.

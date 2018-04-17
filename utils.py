@@ -1,7 +1,15 @@
 from abc import ABCMeta, abstractmethod
 
 
+try:
+    from numba import jit
+except ImportError:
+    def jit(func):
+        return func
+
+
 class AbstractRegisteringType(ABCMeta):
+    """Register all subclass with `name` but without abstract methods."""
 
     def __init__(cls, name, bases, attributes):
         super().__init__(name, bases, attributes)
@@ -9,11 +17,8 @@ class AbstractRegisteringType(ABCMeta):
         if not hasattr(cls, 'members'):
             cls.members = {}
 
-        if hasattr(cls, 'name'):
+        if hasattr(cls, 'name') and not cls.__abstractmethods__:
             cls.members[cls.name] = cls
-            for base in bases:
-                if hasattr(base, 'name') and base.name in cls.members:
-                    del cls.members[base.name]
 
 
 def abstract_property(method):

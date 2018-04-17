@@ -1,11 +1,12 @@
 import argparse
+from pathlib import Path
 
 from methods import Method
 from models import SampleCollection, Experiment
 
-from .parser import Parser, Argument
-from .types import Slice, one_of, Indices, dsv, Range
-from .method_parser import MethodParser
+from declarative_parser import Parser, Argument
+from declarative_parser.types import Slice, one_of, Indices, dsv, Range
+from declarative_parser.constructor_parser import ConstructorParser
 
 
 class SampleCollectionFactory(Parser):
@@ -82,6 +83,22 @@ class SampleCollectionFactory(Parser):
              'it is assumed that there is no such column.'
     )
 
+    constructors_by_ext = {
+        'tsv': SampleCollection.from_file,
+        'csv': SampleCollection.from_csv_file,
+        'gct': SampleCollection.from_gct_file
+    }
+
+    deduce_format = Argument(
+        type=bool,
+        default=True,
+        help='Deduce file format and automatically set the best '
+             'parsing parameters. The format will be inferred from '
+             'extension of the provided file(s). '
+             f'Following formats are supported: {constructors_by_ext}. '
+             'Default: true.'
+    )
+
     def produce(self, unknown_args=None):
         opts = self.namespace
         name = opts.name or self.name
@@ -97,8 +114,15 @@ class SampleCollectionFactory(Parser):
 
                 use_header = isinstance(opts.header[i], int)
 
+                constructor = SampleCollection.from_file
+
+                if opts.deduce_format:
+                    extension = Path(file_obj.name).suffix[1:]
+                    if extension in self.constructors_by_ext:
+                        constructor = self.constructors_by_ext[extension]
+
                 sample_collections.append(
-                    SampleCollection.from_file(
+                    constructor(
                         f'Sample collection, part {i} of {name}',
                         file_obj,
                         columns_selector=opts.columns[i].get_iterator if opts.columns else None,
@@ -198,7 +222,7 @@ class SingleFileExperimentFactory(Parser):
 class CLIExperiment(Parser):
     """Use both: case and control or data to create an Experiment."""
 
-    pull_to_namespace_above = True
+    __pull_to_namespace_above__ = True
     __skip_if_absent__ = False
 
     control = SampleCollectionFactory()
@@ -245,7 +269,7 @@ class CLI(Parser):
 
         # initialize parser for this method
         # (different methods require different arguments)
-        method_parser = MethodParser(method=method)
+        method_parser = ConstructorParser(constructor=method)
 
         return method_parser
 
@@ -267,7 +291,7 @@ class CLI(Parser):
                 # and for a method) should be displayed.
 
                 methods = {
-                    name: MethodParser(method=method)
+                    name: ConstructorParser(constructor=method)
                     for name, method in Method.members.items()
                 }
 
@@ -293,8 +317,8 @@ class CLI(Parser):
             if argument not in remaining_unknown_args:
                 unknown_args.remove(argument)
 
-        # ant initialize the method with these arguments
-        options.method = method_parser.method(**vars(method_options))
+        # and initialize the method with these arguments
+        options.method = method_parser.constructor(**vars(method_options))
 
         return options
 
