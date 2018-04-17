@@ -204,7 +204,7 @@ def test_file_with_description(test_files, tmpdir):
     })
 
     expected_warning = (
-        'First line of your file contains "description" column '
+        'First line of your file contains "description" column, '
         'but you did not provide "--description_column" argument.'
     )
 

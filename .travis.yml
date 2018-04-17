@@ -15,4 +15,4 @@ script:
 
 
 after_success:
-    coveralls
+  - coveralls --data_file .coverage

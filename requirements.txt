@@ -1,3 +1,5 @@
+tqdm
+declarative_parser
 sphinx
 sphinx-autodoc-typehints
 sphinx-autodoc-annotation
