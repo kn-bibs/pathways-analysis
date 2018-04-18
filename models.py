@@ -433,10 +433,3 @@ class Experiment:
 
             return fold_changes
         """
-
-
-class Study:
-    def __init__(self, cases: Sequence[SampleCollection], control: SampleCollection):
-        for case in cases:
-            self.experiments = Experiment(case, control)
-
