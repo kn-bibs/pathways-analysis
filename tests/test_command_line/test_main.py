@@ -1,12 +1,13 @@
 import pytest
 from pytest import fixture
-from test_command_line.utilities import parsing_output
-from test_command_line.utilities import parse
 
 from command_line.main import SingleFileExperimentFactory, CLI
 from methods import Method
 from models import Sample, Gene
-from tests.test_command_line.utilities import parsing_error
+
+from .utilities import parsing_error
+from .utilities import parsing_output
+from .utilities import parse
 
 
 def make_samples(samples_dict):
