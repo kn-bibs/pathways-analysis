@@ -3,9 +3,10 @@ import pytest
 from declarative_parser.parser import Argument
 from patapy import run
 from methods import Method
-from test_command_line.test_main import test_files
-from test_command_line.utilities import parse
-from test_command_line.utilities import parsing_output
+
+from .test_main import test_files
+from .utilities import parse
+from .utilities import parsing_output
 
 
 class Success(Exception):
