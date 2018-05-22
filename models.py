@@ -166,7 +166,14 @@ class SampleCollection:
         """
         Returns: :class:`pandas.DataFrame` object with data for all samples.
         """
-        return {s.name: pd.DataFrame(s) for s in self.samples}
+        df = pd.DataFrame()
+        for sample in self.samples:
+            if df.empty:
+                df = sample.as_array().to_frame(sample.name)
+            else:
+                kwargs = {sample.name: sample.as_array().values}
+                df = df.assign(**kwargs)
+        return df
 
     def __add__(self, other):
         return SampleCollection(self.name, self.samples + other.samples)
@@ -174,8 +181,8 @@ class SampleCollection:
     @classmethod
     def from_file(
             cls, name, file_object,
-            columns_selector: Callable[[Sequence[int]], Sequence[int]]=None,
-            samples=None, delimiter: str='\t', index_col: int=0,
+            columns_selector: Callable[[Sequence[int]], Sequence[int]] = None,
+            samples=None, delimiter: str = '\t', index_col: int = 0,
             use_header=True, reverse_selection=False, prefix=None,
             header_line=0, description_column=None
     ):
@@ -416,20 +423,3 @@ class Experiment:
 
     def get_all(self):
         return self.control + self.case
-
-    # TODO: are there many ways to compute fold-change?
-    def get_fold_change(self, sample_from_case, use_log=False):
-        assert sample_from_case in self.case.samples
-        # TODO: implement inline
-        calc_fold_change(sample_from_case, self.control, use_log=use_log)
-        """
-        def fold_change(case, base, log2=False):
-            fold_changes = case.copy()
-            for (idx, row) in base.iterrows():
-                fold_changes.loc[[idx]] /= (np.mean(row) or 0.01)  # TODO for now arbitrary value 0.01 when 0's are found
-
-            if log2:
-                fold_changes = np.log2(fold_changes)  # TODO Runtime Warning when 0's are encountered
-
-            return fold_changes
-        """
