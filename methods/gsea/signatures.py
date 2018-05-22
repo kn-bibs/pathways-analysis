@@ -160,6 +160,11 @@ class DatabaseParser(Parser):
 
     def produce(self, unknown_args):
         n = self.namespace
+
+        # handle nested case
+        if hasattr(n, 'database'):
+            n = n.database
+
         name = n.name_or_path
 
         # try to get one of pre-defined database by name
