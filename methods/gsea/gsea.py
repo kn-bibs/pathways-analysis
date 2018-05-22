@@ -15,8 +15,8 @@ from utils import jit
 import multiprocess
 from methods.gsea.shufflers import PhenotypeShuffler, GeneShuffler
 from methods.method import Method, MethodResult
+from metrics import signal_to_noise, RANKING_METRICS
 from models import Experiment, SampleCollection
-from .metrics import signal_to_noise, RANKING_METRICS
 from .signatures import DatabaseParser, GeneSet
 
 
