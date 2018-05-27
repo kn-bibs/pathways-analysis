@@ -6,3 +6,4 @@ sphinx-autodoc-annotation
 pandas
 numpy
 statsmodels
+scipy
