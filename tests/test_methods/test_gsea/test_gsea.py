@@ -6,8 +6,8 @@ from test_command_line.utilities import parsing_output
 
 from methods.gsea import GeneralisedGSEA
 from methods.gsea.gsea import ScoreDistribution
-from methods.gsea.metrics import difference_of_classes
 from methods.gsea.signatures import MolecularSignatureDatabase, GeneSet
+from metrics import difference_of_classes
 from models import SampleCollection, Sample, Gene, Experiment
 
 

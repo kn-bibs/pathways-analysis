@@ -1,7 +1,7 @@
 from numpy.ma import sqrt
 from pytest import approx
 
-from methods.gsea.metrics import difference_of_classes, signal_to_noise, ratio_of_classes
+from metrics import difference_of_classes, signal_to_noise, ratio_of_classes
 
 
 def test_difference():
