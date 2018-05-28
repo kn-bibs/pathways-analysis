@@ -2,6 +2,7 @@ name: patapy
 channels:
  - conda-forge
  - anaconda
+ - bioconda
 dependencies:
  - pip:
    - sphinx-autodoc-typehints
@@ -11,3 +12,5 @@ dependencies:
  - numpy
  - statsmodels
  - scipy
+ - bioservices
+ - networkx
