@@ -3,13 +3,12 @@ from inspect import signature
 from functools import lru_cache
 from typing import Iterable
 
-from numpy import mean
+from numpy import mean, nan
 from statistics import stdev
 # for population/biased standard deviation use:
 # from numpy import std as stdev
 
 from utils import jit
-
 
 RANKING_METRICS = {}
 
@@ -30,6 +29,7 @@ def metric(name):
     Args:
         name: user-visible name of the metric
     """
+
     def decorator(func):
         func.name = name
 
@@ -60,7 +60,7 @@ def difference_of_classes(case, control):
 
 @metric('ratio')
 def ratio_of_classes(case, control):
-    return mean(case) / mean(control)
+    return mean(case) / mean(control) if mean(control) != 0 else nan
 
 
 @metric('signal_to_noise')
@@ -76,7 +76,7 @@ def signal_to_noise(case, control):
         - the samples have non-zero variation
     """
     return (
-        (mean(case) - mean(control))
-        /
-        (stdev(case) + stdev(control))
+            (mean(case) - mean(control))
+            /
+            (stdev(case) + stdev(control))
     )

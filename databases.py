@@ -6,16 +6,17 @@ class KEGGPathways:
 
     def __init__(self, organism="Homo sapiens"):
         self.database = KEGG()
-        self.organism = self.get_organism_code(organism)
+        self.organism = self.get_organism_code(organism.lower())
 
-    def search_by_gene(self, gene_name):
+    def search_by_gene(self, gene_name: str):
         """
 
         Args:
-            gene_name: gene name (ex 'BRCA2')
+            gene_name: gene name (ex. 'BRCA2')
 
         Returns:
-            Dictionary with all ids of all pathways cointaining given gene as keys and their full names as values.
+            Dictionary with all ids of all pathways containing given ge
+            ne as keys and their full names as values.
 
         """
         try:
@@ -24,11 +25,12 @@ class KEGGPathways:
         except AttributeError:
             return {}
 
-    def search_by_pathway(self, pathway_id):
+    def get_pathway(self, pathway_id: str, self_loops: bool = False):
         """
 
         Args:
             pathway_id: KEGG pathway id (ex. 'hsa04110')
+            self_loops: information about whether or not include self loops in returned graph
 
         Returns:
             G: Directed graph (networkx.DiGraph object) depicting pathway, with a comma-separated string
@@ -36,23 +38,46 @@ class KEGGPathways:
             Each edge has weight 'type', which is a list of interaction types between two nodes.
 
         """
+
         G = nx.DiGraph()
-        pathway = self.database.parse_kgml_pathway(pathway_id)
-        names = {x['id']: x['name'] for x in pathway['entries']}
-        for x in pathway['relations']:
-            e1 = names[x['entry1']]
-            e2 = names[x['entry2']]
-            if e1 != 'undefined' and e2 != 'undefined':
-                # assumption of interaction direction entry1 -> entry2 #TODO: validate
-                record1 = self.database.get(e1).split()
-                name1 = ''.join(record1[record1.index('NAME') + 1: record1.index('DEFINITION')])
-                record2 = self.database.get(e2).split()
-                name2 = ''.join(record2[record2.index('NAME') + 1: record2.index('DEFINITION')])
-                G.add_nodes_from([name1, name2])
-                if G.has_edge(name1, name2):
-                    G[name1][name2]['type'] = G[name1][name2]['type'] + [x['name']]
-                else:
-                    G.add_edge(name1, name2, type=[x['name']])
+        try:
+            pathway = self.database.parse_kgml_pathway(pathway_id)
+        except TypeError:
+            # incorrect pathway_id
+            pathway = None
+
+        if pathway:
+            names = {}
+            for entry in pathway['entries']:
+                # only intra-pathway interactions taken into account
+                if entry['gene_names']:
+                    names[entry['id']] = {'name': entry['gene_names'], 'type': entry['type']}
+
+            for rel in pathway['relations']:
+                if rel['entry1'] in names.keys() and rel['entry2'] in names.keys():
+                    e1 = names[rel['entry1']]['name']
+                    e2 = names[rel['entry2']]['name']
+                    G.add_node(e1, type=names[rel['entry1']]['type'])
+                    G.add_node(e2, type=names[rel['entry2']]['type'])
+                    if G.has_edge(e1, e2):
+                        G[e1][e2]['type'] = G[e1][e2]['type'] + [rel['name']]
+                    else:
+                        # assumption of interaction direction entry1 -> entry2 #TODO: validate
+                        if e1 != e2 or (e1 == e2 and self_loops):
+                            G.add_edge(e1, e2, type=[rel['name']])
+
+        not_gene_nodes = []
+        for node in G.nodes():
+            # only interactions between genes
+            if G.node[node]['type'] != 'gene':
+                for in_edge in G.in_edges(node):
+                    for out_edge in G.out_edges(node):
+                        G.add_edge(in_edge[0], out_edge[1],
+                                   type=list(set(nx.get_edge_attributes(G, 'type')[in_edge] +
+                                                 nx.get_edge_attributes(G, 'type')[out_edge])))
+                not_gene_nodes.append(node)
+        G.remove_nodes_from(not_gene_nodes)
+
         return G
 
     def fetch_organism_codes(self):
@@ -60,7 +85,7 @@ class KEGGPathways:
 
         Returns:
             Dictionary with organisms as keys, and KEGG organism codes as values:
-            {   'Homo sapiens' : 'hsa',
+            {   'homo sapiens' : 'hsa',
                 'human' : 'hsa',
                 ...
             }
@@ -72,18 +97,18 @@ class KEGGPathways:
                 code = line.split('\t')[1]
                 org = line.split('\t')[2]
                 if '(' in org:
-                    org = [x.strip() for x in org[:-1].split('(')]
+                    org = [x.strip().lower() for x in org[:-1].split('(')]
                     for o in org:
                         codes[o] = code
                 else:
                     codes[org] = code
         return codes
 
-    def get_organism_code(self, org):
+    def get_organism_code(self, org: str):
         """
 
         Args:
-            org: organism name (ex. 'Homo sapiens', 'human')
+            org: organism name (ex. 'Homo sapiens', 'human') - lowercase and uppercase optional
 
         Returns:
             KEGG organism code
