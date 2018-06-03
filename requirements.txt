@@ -3,6 +3,9 @@ declarative_parser
 sphinx
 sphinx-autodoc-typehints
 sphinx-autodoc-annotation
-pandas
+pandas>=0.23.0
 numpy
 statsmodels
+scipy
+bioservices
+networkx

@@ -1,4 +1,6 @@
 from functools import lru_cache
+from metrics import ratio_of_classes
+from numpy import log2
 from typing import Callable, Mapping, Sequence, List
 from warnings import warn
 
@@ -423,3 +425,19 @@ class Experiment:
 
     def get_all(self):
         return self.control + self.case
+
+    def calculate_fold_change(self):
+        """
+
+        Returns: class:`pandas.DataFrame` object with fold change and log transformed fold changes values -
+            fold change of the expression level of given gene in the sample under study to the normal level
+            (average in a control group)
+
+        """
+        fc = {}
+        for (idx, row) in self.get_all().as_array().iterrows():
+            control = [row[label] for label in self.control.labels]
+            case = [row[label] for label in self.case.labels]
+            ratio = ratio_of_classes(case, control)
+            fc[idx] = [ratio, log2(ratio)]
+        return pd.DataFrame.from_dict(fc, orient="index", columns=['FC', 'logFC'])
