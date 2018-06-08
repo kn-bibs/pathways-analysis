@@ -1,6 +1,6 @@
 from models import Experiment
 import pandas as pd
-from scipy.stats import ttest_ind
+from scipy.stats import ttest_ind, hypergeom
 
 
 def ttest(experiment: Experiment):
@@ -20,3 +20,17 @@ def ttest(experiment: Experiment):
         case = [row[label] for label in experiment.case.labels]
         pvals[idx] = ttest_ind(control, case).pvalue
     return pd.Series(pvals, name='p-value')
+
+
+def hypergeom_distribution(k: int, m: int, n: int, s: int):
+    """
+    Survival function of hypergeometric distribution.
+
+    Returns:
+        Probability of drawing at least 'k' objects of Type I from bin,
+        containing 'm' objects (of which 'n' are Type I objects),
+        while 's' objects are randomly drawn without replacement from the total population.
+
+    """
+    h = hypergeom.sf(k - 1, m, n, s)
+    return h

@@ -3,6 +3,9 @@ import networkx as nx
 
 
 class KEGGPathways:
+    """
+    KEGG PATHWAY Database API
+    """
 
     def __init__(self, organism="Homo sapiens"):
         self.database = KEGG()
@@ -15,8 +18,7 @@ class KEGGPathways:
             gene_name: gene name (ex. 'BRCA2')
 
         Returns:
-            Dictionary with all ids of all pathways containing given ge
-            ne as keys and their full names as values.
+            Dictionary with ids of all pathways containing given gene as keys and their full names as values.
 
         """
         try:
@@ -33,7 +35,7 @@ class KEGGPathways:
             self_loops: information about whether or not include self loops in returned graph
 
         Returns:
-            G: Directed graph (networkx.DiGraph object) depicting pathway, with a comma-separated string
+            `networkx.DiGraph` object: Directed graph depicting pathway, with a comma-separated string
             containing gene names as graph nodes and directed edges representing interactions between genes.
             Each edge has weight 'type', which is a list of interaction types between two nodes.
 
@@ -72,9 +74,7 @@ class KEGGPathways:
             if G.node[node]['type'] != 'gene':
                 for in_edge in G.in_edges(node):
                     for out_edge in G.out_edges(node):
-                        G.add_edge(in_edge[0], out_edge[1],
-                                   type=list(set(nx.get_edge_attributes(G, 'type')[in_edge] +
-                                                 nx.get_edge_attributes(G, 'type')[out_edge])))
+                        G.add_edge(in_edge[0], out_edge[1], type=['indirect'])
                 not_gene_nodes.append(node)
         G.remove_nodes_from(not_gene_nodes)
 
@@ -84,7 +84,7 @@ class KEGGPathways:
         """
 
         Returns:
-            Dictionary with organisms as keys, and KEGG organism codes as values:
+            Dictionary with organisms as keys, and KEGG organism codes as values
             {   'homo sapiens' : 'hsa',
                 'human' : 'hsa',
                 ...
@@ -111,7 +111,7 @@ class KEGGPathways:
             org: organism name (ex. 'Homo sapiens', 'human') - lowercase and uppercase optional
 
         Returns:
-            KEGG organism code
+            str: KEGG organism code
 
         """
         codes = self.fetch_organism_codes()
