@@ -95,8 +95,8 @@ class Sample:
 
     def as_array(self):
         """
-
-        Returns: one-dimensional labeled array with Gene objects as labels
+        Returns:
+            one-dimensional labeled array with Gene objects as labels
 
         """
         return pd.Series(self.data)
@@ -153,7 +153,10 @@ class SampleCollection:
     @property
     @lru_cache(maxsize=1)
     def genes(self):
-        """Return all genes present in the collection of samples."""
+        """
+        Returns:
+            all genes present in the collection of samples.
+        """
         genes = self.samples[0].genes
         return genes
 
@@ -166,7 +169,9 @@ class SampleCollection:
 
     def as_array(self):
         """
-        Returns: :class:`pandas.DataFrame` object with data for all samples.
+        Returns:
+            `pandas.DataFrame`: two-dimensional labeled array with Gene objects as row labels,
+            storing data from all samples
         """
         df = pd.DataFrame()
         for sample in self.samples:
@@ -418,6 +423,9 @@ class SampleCollection:
 
 # TODO class variable with set of genes + method(s) for checking data integrity
 class Experiment:
+    """
+    Stores all user's experiment data.
+    """
 
     def __init__(self, case: SampleCollection, control: SampleCollection):
         self.control = control
@@ -429,9 +437,10 @@ class Experiment:
     def calculate_fold_change(self):
         """
 
-        Returns: class:`pandas.DataFrame` object with fold change and log transformed fold changes values -
-            fold change of the expression level of given gene in the sample under study to the normal level
-            (average in a control group)
+        Returns:
+            `pandas.DataFrame` object: two-dimensional labeled array with Gene objects as row labels, storing
+            fold change and log transformed fold change values for every gene - fold change of the expression
+            level of given gene in the sample under study to the normal level (average in a control group)
 
         """
         fc = {}

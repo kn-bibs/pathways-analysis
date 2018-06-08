@@ -26,9 +26,10 @@ def hypergeom_distribution(k: int, m: int, n: int, s: int):
     """
     Survival function of hypergeometric distribution.
 
-    Returns: Probability of drawing at least 'k' objects of Type I from bin,
-    containing 'm' objects (of which 'n' are Type I objects),
-    while 's' objects are randomly drawn without replacement from the total population.
+    Returns:
+        Probability of drawing at least 'k' objects of Type I from bin,
+        containing 'm' objects (of which 'n' are Type I objects),
+        while 's' objects are randomly drawn without replacement from the total population.
 
     """
     h = hypergeom.sf(k - 1, m, n, s)

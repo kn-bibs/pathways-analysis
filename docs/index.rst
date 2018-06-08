@@ -13,7 +13,8 @@ Welcome to Pathway Analysis's documentation!
    command_line
    methods
    models
-   stats
+   databases
+   utilities
 
 
 
