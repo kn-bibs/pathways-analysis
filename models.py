@@ -107,6 +107,12 @@ class Sample:
     def __repr__(self):
         return f'<Sample "{self.name}" with {len(self.data)} genes>'
 
+    def exclude_genes(self, gene_list: list):
+        for gene in gene_list:
+            assert isinstance(gene, Gene)
+            if gene in self.data.keys():
+                del self.data[gene]
+
 
 def first_line(file_object, skip_rows=0):
     line = None
@@ -420,6 +426,10 @@ class SampleCollection:
             kwargs['delimiter'] = ','
         return cls.from_file(name, file_object, **kwargs)
 
+    def exclude_genes(self, gene_list: list):
+        for sample in self.samples:
+            sample.exclude_genes(gene_list)
+
 
 # TODO class variable with set of genes + method(s) for checking data integrity
 class Experiment:
@@ -450,3 +460,6 @@ class Experiment:
             ratio = ratio_of_classes(case, control)
             fc[idx] = [ratio, log2(ratio)]
         return pd.DataFrame.from_dict(fc, orient="index", columns=['FC', 'logFC'])
+
+    def exclude_genes(self, gene_list: list):
+        self.get_all().exclude_genes(gene_list)
