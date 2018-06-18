@@ -120,3 +120,20 @@ class KEGGPathways:
         except KeyError:
             print('Invalid organism name.')
             raise
+
+    def get_gene_code(self, gen: str):
+        """
+
+        Args:
+            gen: gene name (ex. 'FGR', 'NIPAL1')
+
+        Returns:
+            KEGG gene code
+
+        """
+        code_gen = self.database.find("hsa", gen)
+
+        if code_gen == str('\n'):
+            code_gen = str()
+            print('Invalid gene name: '+str(gen))
+        return code_gen
