@@ -131,7 +131,7 @@ class KEGGPathways:
             KEGG gene code
 
         """
-        code_gen = self.database.find("hsa", gen)
+        code_gen = self.database.find(self.organism, gen)
 
         if code_gen == str('\n'):
             code_gen = str()

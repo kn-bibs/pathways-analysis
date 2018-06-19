@@ -1,18 +1,21 @@
 import math
 import numpy
+import os.path
+import sys
+
 import pandas as pd
 import statsmodels.api as sm
 from scipy import stats
-from warnings import warn
 
+from databases import KEGGPathways
 from methods.method import Method, MethodResult
 from models import Experiment
-from databases import KEGGPathways
 
 
 class LRpathResult(MethodResult):
     columns = ['Path_ID', 'nGene', 'LRcoeff', 'odds_ratio', 'LRpvalue', 'catsigIDs']
-    description = """ For more information see:
+    description = """ 
+    For more information see:
     http://lrpath.ncibi.org/method.pdf 
     """
 
@@ -45,11 +48,12 @@ class LRpath(Method):
      - minimum number of unique gene IDs analyzed in category to be tested
      - maximum number of unique gene IDs analyzed in category to be tested
      - cutoff = Entrez gene IDs in each category with p-values < will be tested
-     - database to be tested: "KEGG" or "GO"
+     - database to be tested
      - lower and upper p-values to be used
 
     Please refer & cite following publications:
-        - Sartor, Leikauf, Medvedovic (2009, Bioinformatics 25, 211-217)
+        - 'LRpath: a logistic regression approach for identifying enriched biological groups in gene expression data.'
+            Sartor, Leikauf, Medvedovic (2009, Bioinformatics 25, 211-217)
 
     Please use --show_licence to display licence and copyright details.
     """
@@ -61,13 +65,12 @@ class LRpath(Method):
     legal_disclaimer = """ Copyright 2010 The University of Michigan  """
 
     def __init__(
-            self, name_db="GO", database=None, min_g=10, max_g=None,
+            self, database, min_g=10, max_g=None,
             cutoff=0.05, odds_min=0.001, odds_max=0.5,
     ):
         """
 
         Args:
-            name_db: a string with name database, "KEGG" or "GO"
             database: file with columns separated by tab, [1] first column should has pathway_id in first place (it can
                 some others infromacions separated by spaces), and [2] second column should has gene exist in this
                 pathway separated by space.
@@ -79,7 +82,6 @@ class LRpath(Method):
         """
 
         self.database = database
-        self.name_db = name_db
         self.min_g = min_g
         self.max_g = max_g
         self.cutoff = cutoff
@@ -91,6 +93,7 @@ class LRpath(Method):
         Return list of results
 
         """
+
         geneids = experiment.case.genes
         match = experiment.case.as_array()
         data, names_sample = self.create_data(match)
@@ -127,20 +130,16 @@ class LRpath(Method):
         Open file with database and initialize creating database accepted by method
 
         """
-        if self.database is None:
-            if self.name_db == "GO":
-                self.database = '/home/kamila/test_go_list'
-            elif self.name_db == "KEGG":
-                self.database = 'home/kamila/test_kegg_list'
+        if os.path.exists(self.database):
+            if type(self.database) is not dict:
+                db = self.get_list_db()
+
             else:
-                warn("You must get name_db, or file with database")
+                db = self.database
+            return db
 
-        if type(self.database) is not dict:
-            db = self.get_list_db()
         else:
-            db = self.database
-
-        return db
+            sys.exit("Path with database file is not exist")
 
     @staticmethod
     def name_geneid(data, geneids):
@@ -156,7 +155,8 @@ class LRpath(Method):
 
     def get_list_db(self):
         """
-        Return database accepted in LRpath method
+        Returns:
+            A database accepted in LRpath method
 
         """
         file = open(self.database).readlines()
@@ -172,8 +172,12 @@ class LRpath(Method):
 
     def calc_siggenes(self, data, names, geneid, database):
         """
-        Calculate logistic regression from data which is type DataFrame, list simple names - names, list of geneid,
-        and using database type dick.
+        Calculate logistic regression from data.
+         Args:
+             data: DataFrame
+             names: list of simple names
+             geneid: list of geneid
+             database: dick
 
         """
         name = names[0]
