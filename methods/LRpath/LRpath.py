@@ -90,7 +90,9 @@ class LRpath(Method):
 
     def run(self, experiment: Experiment) -> LRpathResult:
         """
-        Return list of results
+        Initialize all procedures for LRpath method.
+        Return:
+            list of results
 
         """
 
@@ -105,8 +107,8 @@ class LRpath(Method):
 
     @staticmethod
     def create_data(match):
-        """"
-        Create sample data and list of sample names
+        """
+        Create sample data and list of samples names
 
         """
         diki = {}
@@ -127,7 +129,7 @@ class LRpath(Method):
 
     def create_database(self):
         """
-        Open file with database and initialize creating database accepted by method
+        Open file with database and initialize creating database accepted by LRpath method
 
         """
         if os.path.exists(self.database):
@@ -155,6 +157,8 @@ class LRpath(Method):
 
     def get_list_db(self):
         """
+        Create dick with our database
+
         Returns:
             A database accepted in LRpath method
 
@@ -172,12 +176,12 @@ class LRpath(Method):
 
     def calc_siggenes(self, data, names, geneid, database):
         """
-        Calculate logistic regression from data.
+        Calculate logistic regression,
          Args:
-             data: DataFrame
-             names: list of simple names
-             geneid: list of geneid
-             database: dick
+             data: DataFrame with our samples
+             names: list of samples names
+             geneid: list of geneid, gens entrez id
+             database: dick created from our database
 
         """
         name = names[0]
