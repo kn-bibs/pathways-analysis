@@ -10,6 +10,7 @@ Nucleic Acids Res., 2007, vol. 35 (pg. W206-W211)
 interaction_weights = {
     'activation': 1.0,
     'complex': 1.0,
+    'compound': 1.0,
     'dissociation': 1.0,
     'glycosylation': 1.0,
     'indirect': 1.0,
