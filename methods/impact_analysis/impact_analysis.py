@@ -7,6 +7,7 @@ from numpy import log2, isnan
 from stats import ttest, hypergeom_distribution
 from statsmodels.stats.multitest import multipletests
 from .constants import *
+import os
 import pandas as pd
 
 
@@ -52,12 +53,13 @@ class ImpactAnalysis(Method):
 
     name = 'impact_analysis'
 
-    def __init__(self, organism: str = 'Homo sapiens', threshold: float = 0.05, **kwargs):
+    def __init__(self, organism: str = 'Homo sapiens', threshold: float = 0.05, markdown: str = '', **kwargs):
         """
 
         Args:
             organism: organism name (ex. 'Homo sapiens', 'human')
             threshold: float: threshold for identification of differentially expressed genes
+            markdown: generate additional markdown output file with given name
         """
         if threshold < 0 or threshold > 1:
             raise ValueError('Indices need to be in (0,1) range')
@@ -66,6 +68,10 @@ class ImpactAnalysis(Method):
         self.degs = None  # differentially expressed genes
         self.FC = None
         self.experiment_genes = None
+        self.markdown = markdown
+        if markdown:
+            if os.path.exists(markdown if '.md' in markdown else markdown.split('.')[0] + '.md'):
+                print("Warning: '" + markdown + "' file already exists and will be overwritten!")
 
     def run(self, experiment: Experiment) -> ImpactAnalysisResult:
         """
@@ -116,7 +122,10 @@ class ImpactAnalysis(Method):
         ifp_pathways = [IAPathway(res.loc[i]) for i in range(len(res.index))]
         ifp_pathways.sort(key=lambda x: x.IF if not isnan(x.IF) else 0, reverse=True)
 
-        return ImpactAnalysisResult(ifp_pathways)
+        result = ImpactAnalysisResult(ifp_pathways)
+        if self.markdown:
+            result.generate_markdown(self.markdown, 'Results of Impact Analysis:')
+        return result
 
     def calculate_impact_factor(self, experiment, pathway):
 
