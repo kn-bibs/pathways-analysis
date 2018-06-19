@@ -1,21 +1,20 @@
+from databases import KEGGPathways
+import math
 from methods.method import Method, MethodResult
 from models import Experiment
-from stats import ttest
-from databases import KEGGPathways
 from networkx import get_edge_attributes
-
-#todo uzupełnić requirements
-
 import numpy as np
 import pandas as pd
-from scipy import stats
 import random
-import math
-from statsmodels.sandbox.stats import multicomp
+from scipy import stats
 from scipy.stats import norm
+from stats import ttest
+from statsmodels.sandbox.stats import multicomp
+
+
+# todo
 
 class SPIAPathway:
-
     def __init__(self, data):
         self.id = data['id']
         self.pNDE = round(data['pNDE'], 3)
@@ -26,22 +25,24 @@ class SPIAPathway:
         self.pGfdr = round(data['pGfdr'], 3)
         self.status = data['status']
 
-class SPIAResult(MethodResult):
-    #TODO description = """ """
-    '''
 
-    '''
-    columns=['id','name','pNDE', 'pPERT', 'pG', 'pGfdr', 'pGFWER', 'status']
+class SPIAResult(MethodResult):
+    # TODO description = """ """
+    """
+
+    """
+    columns = ['id', 'name', 'pNDE', 'pPERT', 'pG', 'pGfdr', 'pGFWER', 'status']
+
 
 class SPIA(Method):
-    #todo description!!!!
-    '''
+    # todo description
+    """
 
-    '''
+    """
     help = __doc__
     name = "SPIA"
 
-    def __init__(self, organism: str = 'hsa', threshold = 0.05):
+    def __init__(self, organism: str = 'hsa', threshold=0.05):
         SPECIES = [["anopheles", "Anopheles gambiae", "Ag", "aga", "anoGam", "7165"],
                    ["bovine", "Bos taurus", "Bt", "bta", "bosTau", "9913"],
                    ["canine", "Canis familiaris", "Cf", "cfa", "canFam", "9615"],
@@ -67,22 +68,25 @@ class SPIA(Method):
         else:
             raise Exception("Unknown organism")
 
-        #todo dodać inne zmienne do zmieniania
+        # todo
         if threshold < 0 or threshold > 1:
             raise ValueError('Indices need to be in (0,1) range')
         self.threshold = threshold
 
-
     @staticmethod
-    def load_data_dict(dictionary,all):
-        '''
-        Part of this code is imported from https://github.com/iseekwonderful/PyPathway on MIT license.Load data from certain json.
-        :param dictionary:  the json, this method will load data form json
-        :param all: a python list of total genes. e.g. ['A', 'B', 'C', 'D']
-        :return: the loaded data
-        '''
-        data=dictionary
-        Bb=set(all)
+    def load_data_dict(dictionary, all):
+        """
+        Part of this code is imported from https://github.com/iseekwonderful/PyPathway on MIT license.
+        Load data from certain json.
+        Args:
+            dictionary: the json, this method will load data form json
+            all: a python list of total genes. e.g. ['A', 'B', 'C', 'D']
+
+        Returns: the loaded data
+
+        """
+        data = dictionary
+        Bb = set(all)
         datpT = {}
         id2name = data['id2name']
         for pid, v in data.items():
@@ -92,13 +96,13 @@ class SPIA(Method):
             for key, d in v.items():
                 if key == 'row_names':
                     for idname in range(len(d)):
-                        Aaa=set(d[idname].split(','))
-                        Ddd=list(Aaa.intersection(Bb))
+                        Aaa = set(d[idname].split(','))
+                        Ddd = list(Aaa.intersection(Bb))
                         if Ddd:
-                            if len(Ddd)>1:
+                            if len(Ddd) > 1:
                                 print("Error with gene names in pathway occured")
                             else:
-                                d[idname]=Ddd[0]
+                                d[idname] = Ddd[0]
 
                     datpT[pid][key] = d
 
@@ -113,9 +117,10 @@ class SPIA(Method):
         return datpT, id2name
 
     @staticmethod
-    def calculate_spia(de, all, dictionary, nB=2000, beta=None, combine='fisher'):  # todo: opis
-        '''
-        This code is imported from https://github.com/iseekwonderful/PyPathway on MIT license. Contains SPIA alghoritm.
+    def calculate_spia(de, all, dictionary, nB=2000, beta=None, combine='fisher'):  # todo:
+        """
+        This code is imported from https://github.com/iseekwonderful/PyPathway on MIT license.
+        Contains SPIA algorithm.
         Args:
             de: a python dict of DEGs. key:gene, value:fold-change. e.g. {'A':2.1, 'B':3.3 ...}
             all: a python list of total genes. e.g. ['A', 'B', 'C', 'D']
@@ -126,13 +131,13 @@ class SPIA(Method):
 
         Returns:
 
-        '''
+        """
 
         de = {k: float(v) for k, v in de.items()}
         all = [x for x in all]
-        datpT_ALL, id2name = SPIA.load_data_dict(dictionary,all)
+        datpT_ALL, id2name = SPIA.load_data_dict(dictionary, all)
 
-        # todo przerzucić to do osobnego pliku
+        # todo
         rel = ["activation", "compound", "binding/association", "expression", "inhibition",
                "activation_phosphorylation", "phosphorylation", "inhibition_phosphorylation",
                "inhibition_dephosphorylation", "dissociation", "dephosphorylation",
@@ -147,7 +152,7 @@ class SPIA(Method):
         datp_ALL = {}
         for k, v in datpT_ALL.items():
             sizem = len(v[rel[0]][0])
-            s, con = np.zeros((sizem, sizem)), np.zeros((sizem,sizem))
+            s, con = np.zeros((sizem, sizem)), np.zeros((sizem, sizem))
             for kk, vv in rel_dict.items():
                 con += v[kk] * abs(vv)
                 s += v[kk] * vv
@@ -219,27 +224,27 @@ class SPIA(Method):
         pGfdr = {list(pG.keys())[i]: o[i] for i in range(len(list(pG.keys())))}
         _, o, _, _ = multicomp.multipletests(list(pG.values()), method='bonferroni')
         pGbf = {list(pG.keys())[i]: o[i] for i in range(len(list(pG.keys())))}
-        df=pd.DataFrame(columns=['id','name','pNDE', 'pPERT', 'pG', 'pGfdr', 'pGFWER', 'status'])
+        df = pd.DataFrame(columns=['id', 'name', 'pNDE', 'pPERT', 'pG', 'pGfdr', 'pGFWER', 'status'])
         for k in pG:
-            df.loc[len(df.index)] = [k,id2name[k],pNDE[k],pb[k],pG[k],pGfdr[k],pGbf[k],status[k]]
-        df2=[SPIAPathway(df.loc[i]) for i in range(len(df.index))]
+            df.loc[len(df.index)] = [k, id2name[k], pNDE[k], pb[k], pG[k], pGfdr[k], pGbf[k], status[k]]
+        df2 = [SPIAPathway(df.loc[i]) for i in range(len(df.index))]
         return df2
 
     def run(self, experiment: Experiment) -> SPIAResult:
 
         pvalue = ttest(experiment) <= self.threshold
         calc_f = experiment.calculate_fold_change()
-        all=pvalue.index.tolist()
+        all = pvalue.index.tolist()
         for a in range(len(all)):
-            all[a]=all[a].name
-        p= pvalue[pvalue == True].index.tolist()
-        de={}
+            all[a] = all[a].name
+        p = pvalue[pvalue == True].index.tolist()
+        de = {}
         for i in p:
             de[i.name] = calc_f["FC"][i]
-        json={}
+        json = {}
         if len(de) == 0:
             # if there are no DEGs anywhere, the problem of finding the impact on various pathways is meaningless
-            print('No differentialy expressed genes.')
+            print('No DE genes.')
             return SPIAResult([])
         db = KEGGPathways(self.organism)
         pathways = {}
@@ -253,10 +258,10 @@ class SPIA(Method):
             return SPIAResult([])
         for (id, descr) in pathways.items():
             pathway = db.get_pathway(id)
-            path_genes=set(pathway.nodes)
-            path_genes=list(path_genes)
+            path_genes = set(pathway.nodes)
+            path_genes = list(path_genes)
 
-            #todo: to też zmienić
+            # todo:
             rel = ["activation", "compound", "binding/association", "expression", "inhibition",
                    "activation_phosphorylation", "phosphorylation", "inhibition_phosphorylation",
                    "inhibition_dephosphorylation", "dissociation", "dephosphorylation",
@@ -266,18 +271,18 @@ class SPIA(Method):
                    "indirect_phosphorylation", "activation_binding/association",
                    "indirect", "activation_compound", "activation_ubiquination"]
 
-            #todo beta jeśli nieznane interakcje
+            # todo
 
-            interaction_list={i:[] for i in rel}
-            x=get_edge_attributes(pathway, 'type')
-            for gene1,interaction in x.items():
+            interaction_list = {i: [] for i in rel}
+            x = get_edge_attributes(pathway, 'type')
+            for gene1, interaction in x.items():
                 interaction = '_'.join(interaction)
                 if interaction in interaction_list.keys():
-                    interaction_list[interaction].append([path_genes.index(gene1[0]),path_genes.index(gene1[1])])
+                    interaction_list[interaction].append([path_genes.index(gene1[0]), path_genes.index(gene1[1])])
                 else:
-                    interaction_list[interaction]=[[path_genes.index(gene1[0]), path_genes.index(gene1[1])]]
-            interaction_list['row_names']=path_genes
-            json[id]=interaction_list
+                    interaction_list[interaction] = [[path_genes.index(gene1[0]), path_genes.index(gene1[1])]]
+            interaction_list['row_names'] = path_genes
+            json[id] = interaction_list
         json['id2name'] = pathways
-        s=SPIA.calculate_spia(de,all,json)
+        s = SPIA.calculate_spia(de, all, json)
         return SPIAResult(s)
