@@ -132,16 +132,14 @@ class LRpath(Method):
         Open file with database and initialize creating database accepted by LRpath method
 
         """
-        if os.path.exists(self.database):
-            if type(self.database) is not dict:
+        if type(self.database) is not dict:
+            if os.path.exists(self.database):
                 db = self.get_list_db()
-
             else:
-                db = self.database
-            return db
-
+                sys.exit("Path with database file is not exist")
         else:
-            sys.exit("Path with database file is not exist")
+            db = self.database
+        return db
 
     @staticmethod
     def name_geneid(data, geneids):
