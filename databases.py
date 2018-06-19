@@ -74,7 +74,8 @@ class KEGGPathways:
             if G.node[node]['type'] != 'gene':
                 for in_edge in G.in_edges(node):
                     for out_edge in G.out_edges(node):
-                        G.add_edge(in_edge[0], out_edge[1], type=['indirect'])
+                        if in_edge[0] != out_edge[1] or (in_edge[0] == out_edge[1] and self_loops):
+                            G.add_edge(in_edge[0], out_edge[1], type=['indirect'])
                 not_gene_nodes.append(node)
         G.remove_nodes_from(not_gene_nodes)
 
