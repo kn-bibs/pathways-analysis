@@ -2,12 +2,19 @@
 Methods
 *******
 
-===================
-Implemented methods
-===================
-
+====
+GSEA
+====
 
 .. automodule:: methods.gsea
+   :members:
+
+
+===============
+Impact Analysis
+===============
+
+.. automodule:: methods.impact_analysis
    :members:
 
 
