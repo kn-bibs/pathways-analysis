@@ -55,7 +55,6 @@ class LRpath(Method):
         - 'LRpath: a logistic regression approach for identifying enriched biological groups in gene expression data.'
             Sartor, Leikauf, Medvedovic (2009, Bioinformatics 25, 211-217)
 
-    Please use --show_licence to display licence and copyright details.
     """
 
     help = __doc__

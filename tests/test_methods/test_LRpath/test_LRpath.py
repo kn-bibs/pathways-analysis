@@ -12,18 +12,9 @@ def test_help(capsys):
     assert 'LRpath performs gene' in text.std
 
 
-def test_license(capsys):
-    pass
-
-
 def create_test_db():
     db = {'GO:0001101': ['8649'], 'GO:0001819': ['6288', '3600']}
     return db
-
-
-def test_database():
-    db = create_test_db()
-    assert len(db) == 2
 
 
 def minimal_data():
@@ -69,5 +60,3 @@ def test_run():
 
     map2k1 = results.scored_list[1]
     assert round(map2k1.LRcoeff, 10) == round(-0.0396834554227424, 10)
-
-
