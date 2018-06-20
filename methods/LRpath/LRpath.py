@@ -35,6 +35,7 @@ class LRPathway:
 
 class LRpath(Method):
     """
+
     LRpath performs gene set enrichment testing, an approach used to test for predefined
     biologically-relevant gene sets that contain more significant genes from an experimental
     dataset than expected by chance. Given a high-throughput dataset with continuous significance
@@ -109,7 +110,7 @@ class LRpath(Method):
 
         results = LRpathResult(results)
         if self.markdown:
-            results.generate_markdown(self.markdown, 'Results of Impact Analysis:')
+            results.generate_markdown(self.markdown, 'Results of LRpath:')
         return results
 
     @staticmethod
