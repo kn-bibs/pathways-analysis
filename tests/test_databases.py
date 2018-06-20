@@ -32,3 +32,8 @@ def test_get_pathway():
 def test_get_organism_code():
     with pytest.raises(KeyError):
         KEGGPathways().get_organism_code('Homo bioinformaticus')
+
+
+def test_get_gene_code():
+    gen = KEGGPathways().get_gene_code('BIOINF2018')
+    assert gen == ''

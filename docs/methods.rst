@@ -18,6 +18,14 @@ Impact Analysis
    :members:
 
 
+======
+LRpath
+======
+
+.. automodule:: methods.LRpath
+    :members:
+
+
 ===================
 Adding a new Method
 ===================
