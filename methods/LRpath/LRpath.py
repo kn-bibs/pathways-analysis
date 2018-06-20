@@ -65,7 +65,7 @@ class LRpath(Method):
 
     def __init__(
             self, database, min_g=10, max_g=None,
-            cutoff=0.05, odds_min=0.001, odds_max=0.5,
+            cutoff=0.05, odds_min=0.001, odds_max=0.5, markdown: str = ''
     ):
         """
 
@@ -78,6 +78,7 @@ class LRpath(Method):
             cutoff: entrez gene IDs in each category with p-values < cutoff, will be tested
             odds_min: lower p-values be used
             odds_max: upper p-values to be used
+            markdown: generate additional markdown output file with given name
         """
 
         self.database = database
@@ -86,6 +87,10 @@ class LRpath(Method):
         self.cutoff = cutoff
         self.odds_min = odds_min
         self.odds_max = odds_max
+        self.markdown = markdown
+        if markdown:
+            if os.path.exists(markdown if '.md' in markdown else markdown.split('.')[0] + '.md'):
+                print("Warning: '" + markdown + "' file already exists and will be overwritten!")
 
     def run(self, experiment: Experiment) -> LRpathResult:
         """
@@ -102,7 +107,10 @@ class LRpath(Method):
         data, geneid = self.name_geneid(data, geneids)
         results = self.calc_siggenes(data, names_sample, geneid, db)
 
-        return LRpathResult(results)
+        results = LRpathResult(results)
+        if self.markdown:
+            results.generate_markdown(self.markdown, 'Results of Impact Analysis:')
+        return results
 
     @staticmethod
     def create_data(match):
