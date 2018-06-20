@@ -65,11 +65,11 @@ class LRpath(Method):
     legal_disclaimer = """ Copyright 2010 The University of Michigan  """
 
     def __init__(
-            self, database, min_g=10, max_g=None,
+            self, database, organism: str = 'Homo sapiens', min_g=10, max_g=None,
             cutoff=0.05, odds_min=0.001, odds_max=0.5, markdown: str = ''
     ):
         """
-
+ma
         Args:
             database: file with columns separated by tab, [1] first column should has pathway_id in first place (it can
                 some others infromacions separated by spaces), and [2] second column should has gene exist in this
@@ -83,6 +83,7 @@ class LRpath(Method):
         """
 
         self.database = database
+        self.organism = organism
         self.min_g = min_g
         self.max_g = max_g
         self.cutoff = cutoff
@@ -149,12 +150,10 @@ class LRpath(Method):
             db = self.database
         return db
 
-    @staticmethod
-    def name_geneid(data, geneids):
+    def name_geneid(self, data, geneids):
         geneid = []
-
         for geny in geneids:
-            geneid.append(KEGGPathways().get_gene_code(gen=geny.name).split()[0])
+            geneid.append(KEGGPathways(self.organism).get_gene_code(gen=geny.name).split()[0])
 
         data['gene_name'] = data.index
         data.index = geneid
