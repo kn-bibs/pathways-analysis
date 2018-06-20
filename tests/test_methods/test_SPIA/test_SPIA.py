@@ -8,6 +8,3 @@ def test_help(capsys):
     assert 'signaling pathway impact analysis (SPIA)' in text.std
 
 
-def test_licence(capsys):
-    # TODO
-    pass

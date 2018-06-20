@@ -156,8 +156,7 @@ class SPIA(Method):
         de = {k: float(v) for k, v in de.items()}
         all = [x for x in all]
         datpT_ALL, id2name = SPIA.load_data_dict(dictionary, all)
-        inter_value = [1, 0, 0, 1, -1, 1, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0, 1, -1, -1, 0, 0, 1, 0, 1,
-                       1, 0] or beta
+        inter_value = i_val or beta
         rel_dict = {rel[i]: inter_value[i] for i in range(len(rel))}
         datp_ALL = {}
         for k, v in datpT_ALL.items():
@@ -289,5 +288,5 @@ class SPIA(Method):
         s = SPIA.calculate_spia(de, all, json)
         result = SPIAResult(s)
         if self.markdown:
-            result.generate_markdown(self.markdown, 'Results of Impact Analysis:')
+            result.generate_markdown(self.markdown, 'Results of SPIA:')
         return result

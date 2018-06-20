@@ -28,3 +28,4 @@ rel = ["activation", "compound", "binding/association", "expression", "inhibitio
        "indirect_phosphorylation", "activation_binding/association",
        "indirect", "activation_compound", "activation_ubiquination", "missing interaction"]
 
+i_val = [1, 0, 0, 1, -1, 1, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0, 1, -1, -1, 0, 0, 1, 0, 1, 1, 0]
