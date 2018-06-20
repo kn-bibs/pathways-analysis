@@ -31,6 +31,26 @@ class MethodResult(ABC):
         self.files = files or []
         self.description = description
 
+    def generate_markdown(self, file_name, descr=""):
+        with open(file_name if '.md' in file_name else file_name.split('.')[0] + '.md', 'w') as handle:
+            if self.description:
+                handle.write('# ' + self.description + '\n\n')
+            if descr:
+                handle.write('### ' + descr + '\n\n')
+            endline = '|\n'
+            for i in range(len(self.columns)):
+                handle.write('|' + self.columns[i])
+                if i == len(self.columns) - 1:
+                    handle.write(endline)
+            for i in range(len(self.columns)):
+                handle.write('|---')
+                if i == len(self.columns) - 1:
+                    handle.write(endline)
+            for obj in self.scored_list:
+                for colname in self.columns:
+                    handle.write('|' + str(getattr(obj, colname)) if hasattr(obj, colname) else '')
+                handle.write(endline)
+
 
 class Method(metaclass=AbstractRegisteringType):
     """Defines method of pathway analysis & its arguments.
@@ -82,7 +102,7 @@ class Method(metaclass=AbstractRegisteringType):
         """
 
     @abstract_property
-    def name(self)-> str:
+    def name(self) -> str:
         """Return method name used internally and in command line interface.
 
         The name should not include any spaces."""
