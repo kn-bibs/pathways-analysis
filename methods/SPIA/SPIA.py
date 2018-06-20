@@ -1,20 +1,21 @@
+from .constants import *
 from databases import KEGGPathways
-import math
 from methods.method import Method, MethodResult
 from models import Experiment
 from networkx import get_edge_attributes
-import numpy as np
-import pandas as pd
-import random
 from scipy import stats
 from scipy.stats import norm
 from stats import ttest
 from statsmodels.sandbox.stats import multicomp
+import math
+import numpy as np
+import os
+import pandas as pd
+import random
 
-
-# todo
 
 class SPIAPathway:
+
     def __init__(self, data):
         self.id = data['id']
         self.pNDE = round(data['pNDE'], 3)
@@ -22,69 +23,88 @@ class SPIAPathway:
         self.name = data['name']
         self.pG = round(data['pG'], 3)
         self.pGFWER = round(data['pGFWER'], 3)
-        self.pGfdr = round(data['pGfdr'], 3)
+        self.FDR = round(data['pGfdr'], 3)
         self.status = data['status']
 
 
 class SPIAResult(MethodResult):
-    # TODO description = """ """
-    """
 
-    """
-    columns = ['id', 'name', 'pNDE', 'pPERT', 'pG', 'pGfdr', 'pGFWER', 'status']
+    columns = ['id', 'name', 'pNDE', 'pPERT', 'pG', 'FDR', 'pGFWER', 'status']
 
 
 class SPIA(Method):
-    # todo description
     """
+    The signaling pathway impact analysis (SPIA) combines two types of evidence: the overrepresentation of DE genes in a given pathway
+    and the abnormal perturbation of that pathway, as measured by propagating measured expression changes
+    across the pathway topology.These two aspects are captured by two independent probability values (pNDE and pPERT)
+    and are are finally combined into one global probability value: pG.
+
+    Pipeline schema:
+        1.  Gene expression change between two conditions (fold change) is calculated
+        2.  Differentially expressed genes are identified.
+        3.  KEGG Pathways database is searched for pathways containing at least one differentially expressed gene.
+        4.  pNDE is calculated for each pathway
+        5.  Acc(net perturbation accumulation) is calculated for each pathway
+        6.  pPERT is calculated based on the amount of perturbation measured in each pathway
+        7.  pG is calculated for each pathway
+        8.  Multiple hypothesis testing adjustments of each pathway significance are performed by FDR
+        and Bonferroni correction calculation
+
+    Additional method arguments allow specifying organism for database selection ,
+    threshold for identification of differentially expressed genes,
+    number of iterations of random sampling part of algorithm
+    or comma separated list of values for gene relations (if other than default is needed)
+
+    For more information, please refer to:
+    Adi Laurentiu Tarca, Sorin Draghici, Purvesh Khatri, Sonia S. Hassan, Pooja Mittal,
+    Jung-sun Kim, Chong Jai Kim, Juan Pedro Kusanovic, Roberto Romero;
+    A novel signaling pathway impact analysis, Bioinformatics,
+    Volume 25, Issue 1, 1 January 2009, Pages 75–82
 
     """
     help = __doc__
     name = "SPIA"
 
-    def __init__(self, organism: str = 'hsa', threshold=0.05):
-        SPECIES = [["anopheles", "Anopheles gambiae", "Ag", "aga", "anoGam", "7165"],
-                   ["bovine", "Bos taurus", "Bt", "bta", "bosTau", "9913"],
-                   ["canine", "Canis familiaris", "Cf", "cfa", "canFam", "9615"],
-                   ["chicken", "Gallus gallus", "Gg", "gga", "galGal", "9031"],
-                   ["chimp", "Pan troglodytes", "Pt", "ptr", "PanTro", "9598"],
-                   ["ecoliK12", "Escherichia coli K12", "EcK12", "eco", None, "562,83333,511145"],
-                   ["ecoliSakai", "Escherichia coli Sakai", "EcSakai", "ecs", None, "83334"],
-                   ["fly", "Drosophila melanogaster", "Dm", "dme", "dm", "7227"],
-                   ["human", "Homo sapiens", "Hs", "hsa", "hg", "9606"],
-                   ["mouse", "Mus musculus", "Mm", "mmu", "mm", "10090"],
-                   ["pig", "Sus scrofa", "Ss", "ssc", "susScr", "9823"],
-                   ["rat", "Rattus norvegicus", "Rn", "rno", "rn", "10116"],
-                   ["rhesus", "Macaca mulatta", "Mmu", "mcc", "rheMac", "9544"],
-                   ["worm", "Caenorhabditis elegans", "Ce", "cel", "ce", "6239"],
-                   ["xenopus", "Xenopus laevis", "Xl", "xla", "NA", "8355"],
-                   ["yeast", "Saccharomyces cerevisiae", "Sc", "sce", "sacCer", "4932,559292"],
-                   ["zebrafish", "Danio rerio", "Dr", "dre", "danRer", "7955"]]
+    def __init__(self, organism: str = 'hsa', threshold: float = 0.05, nB: int = 2000, beta=None, markdown: str = ''):
+        """
 
+        Args:
+            organism: organism name (ex. 'Homo sapiens', 'human', 'hsa')
+            threshold: float: threshold for identification of differentially expressed genes
+            nB: number of iterations of random sample choosing at SPIA algorithm
+            beta: list of gene relations values, if None the values are default
+            markdown: generate additional markdown output file with given name
+        """
         for x in SPECIES:
             if organism in x:
                 self.organism = x[1]
                 break
         else:
             raise Exception("Unknown organism")
-
-        # todo
         if threshold < 0 or threshold > 1:
             raise ValueError('Indices need to be in (0,1) range')
         self.threshold = threshold
+        self.nB = nB
+        self.beta = beta
+        self.markdown = markdown
+        if markdown:
+            if os.path.exists(markdown if '.md' in markdown else markdown.split('.')[0] + '.md'):
+                print("Warning: '" + markdown + "' file already exists and will be overwritten!")
 
     @staticmethod
     def load_data_dict(dictionary, all):
-        """
+        '''
+
         Part of this code is imported from https://github.com/iseekwonderful/PyPathway on MIT license.
         Load data from certain json.
+
         Args:
             dictionary: the json, this method will load data form json
             all: a python list of total genes. e.g. ['A', 'B', 'C', 'D']
 
         Returns: the loaded data
 
-        """
+        '''
         data = dictionary
         Bb = set(all)
         datpT = {}
@@ -103,9 +123,7 @@ class SPIA(Method):
                                 print("Error with gene names in pathway occured")
                             else:
                                 d[idname] = Ddd[0]
-
                     datpT[pid][key] = d
-
                 else:
                     m = np.zeros(
                         (len(v['row_names']), len(v['row_names'])))
@@ -117,37 +135,28 @@ class SPIA(Method):
         return datpT, id2name
 
     @staticmethod
-    def calculate_spia(de, all, dictionary, nB=2000, beta=None, combine='fisher'):  # todo:
+    def calculate_spia(de, all, dictionary, nB=2000, beta=None, combine='fisher'):
         """
         This code is imported from https://github.com/iseekwonderful/PyPathway on MIT license.
         Contains SPIA algorithm.
+
         Args:
             de: a python dict of DEGs. key:gene, value:fold-change. e.g. {'A':2.1, 'B':3.3 ...}
             all: a python list of total genes. e.g. ['A', 'B', 'C', 'D']
-            dictionary: a json
-            nB: number of iterations
+            dictionary: a json- contains data from pathways
+            nB: number of iterations of random sample choosing
             beta: list of gene relations values, if None the values are default
-            combine:
+            combine: way of calculating pG
 
-        Returns:
+        Returns: an array with pathway id, pathway name, pNDE, pPERT, pG, FDR correction,
+        Bonferroni correction, status for each pathway
 
         """
 
         de = {k: float(v) for k, v in de.items()}
         all = [x for x in all]
         datpT_ALL, id2name = SPIA.load_data_dict(dictionary, all)
-
-        # todo
-        rel = ["activation", "compound", "binding/association", "expression", "inhibition",
-               "activation_phosphorylation", "phosphorylation", "inhibition_phosphorylation",
-               "inhibition_dephosphorylation", "dissociation", "dephosphorylation",
-               "activation_dephosphorylation", "state change", "activation_indirect",
-               "inhibition_ubiquination", "ubiquination", "expression_indirect",
-               "inhibition_indirect", "repression", "dissociation_phosphorylation",
-               "indirect_phosphorylation", "activation_binding/association",
-               "indirect", "activation_compound", "activation_ubiquination"]
-        inter_value = [1, 0, 0, 1, -1, 1, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0, 1, -1, -1, 0, 0, 1, 0, 1,
-                       1] or beta
+        inter_value = i_val or beta
         rel_dict = {rel[i]: inter_value[i] for i in range(len(rel))}
         datp_ALL = {}
         for k, v in datpT_ALL.items():
@@ -231,7 +240,12 @@ class SPIA(Method):
         return df2
 
     def run(self, experiment: Experiment) -> SPIAResult:
+        """
 
+        Returns: a list of pathways: pathway id, pathway name, pNDE, pPERT, pG, FDR correction,
+            Bonferroni correction, status for each pathway
+
+        """
         pvalue = ttest(experiment) <= self.threshold
         calc_f = experiment.calculate_fold_change()
         all = pvalue.index.tolist()
@@ -244,7 +258,7 @@ class SPIA(Method):
         json = {}
         if len(de) == 0:
             # if there are no DEGs anywhere, the problem of finding the impact on various pathways is meaningless
-            print('No DE genes.')
+            print('No differentialy expressed genes.')
             return SPIAResult([])
         db = KEGGPathways(self.organism)
         pathways = {}
@@ -260,19 +274,6 @@ class SPIA(Method):
             pathway = db.get_pathway(id)
             path_genes = set(pathway.nodes)
             path_genes = list(path_genes)
-
-            # todo:
-            rel = ["activation", "compound", "binding/association", "expression", "inhibition",
-                   "activation_phosphorylation", "phosphorylation", "inhibition_phosphorylation",
-                   "inhibition_dephosphorylation", "dissociation", "dephosphorylation",
-                   "activation_dephosphorylation", "state change", "activation_indirect",
-                   "inhibition_ubiquination", "ubiquination", "expression_indirect",
-                   "inhibition_indirect", "repression", "dissociation_phosphorylation",
-                   "indirect_phosphorylation", "activation_binding/association",
-                   "indirect", "activation_compound", "activation_ubiquination"]
-
-            # todo
-
             interaction_list = {i: [] for i in rel}
             x = get_edge_attributes(pathway, 'type')
             for gene1, interaction in x.items():
@@ -285,4 +286,7 @@ class SPIA(Method):
             json[id] = interaction_list
         json['id2name'] = pathways
         s = SPIA.calculate_spia(de, all, json)
-        return SPIAResult(s)
+        result = SPIAResult(s)
+        if self.markdown:
+            result.generate_markdown(self.markdown, 'Results of SPIA:')
+        return result
