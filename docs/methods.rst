@@ -17,6 +17,13 @@ Impact Analysis
 .. automodule:: methods.impact_analysis
    :members:
 
+====
+SPIA
+====
+
+.. automodule:: methods.SPIA
+   :members:
+
 
 ===================
 Adding a new Method
