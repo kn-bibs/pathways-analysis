@@ -162,11 +162,11 @@ class SampleCollection:
             for sample in self.samples
         )
 
-    def as_array(self):
+    def as_array(self) -> pd.DataFrame:
         """
         Returns: :class:`pandas.DataFrame` object with data for all samples.
         """
-        return {s.name: pd.DataFrame(s) for s in self.samples}
+        return pd.DataFrame({s.name: s.as_array() for s in self.samples})
 
     def __add__(self, other):
         return SampleCollection(self.name, self.samples + other.samples)

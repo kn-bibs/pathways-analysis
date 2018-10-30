@@ -25,6 +25,16 @@ def test_init():
     assert sample_collection.name == 'Tumour'
     assert all(isinstance(k, Sample) for k in sample_collection.samples)
 
+    # TODO: this should probably live in a separate file
+    # test as_array
+    df = sample_collection.as_array()
+
+    # two genes
+    assert len(df) == 2
+
+    # two samples
+    assert list(df.columns) == ['Tumour_1', 'Tumour_2']
+
 
 csv_contents = """\
 NAME,NORM-1,GBM-1,GBM-2,OV-1
