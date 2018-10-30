@@ -354,15 +354,15 @@ class SampleCollection:
         software.broadinstitute.org/cancer/software/gsea/wiki/index.php/Data_formats
         User is allowed to provide settings different from the standard.
         """
-        version = file_object.readline()
-        rows_count, samples_count = map(int, file_object.readline().split('\t'))
+        version = file_object.readline().rstrip()
+        rows_count, samples_count = map(int, file_object.readline().rstrip().split('\t'))
 
         default_values = {
             'description_column': True,
             'header_line': 2
         }
 
-        if version != '#1.2\n':
+        if version != '#1.2':
             warn('Unsupported version of GCT file')
 
         file_object.seek(0)
