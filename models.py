@@ -1,4 +1,6 @@
 from functools import lru_cache
+from metrics import ratio_of_classes
+from numpy import log2
 from typing import Callable, Mapping, Sequence, List
 from warnings import warn
 
@@ -93,8 +95,8 @@ class Sample:
 
     def as_array(self):
         """
-
-        Returns: one-dimensional labeled array with Gene objects as labels
+        Returns:
+            one-dimensional labeled array with Gene objects as labels
 
         """
         return pd.Series(self.data)
@@ -104,6 +106,12 @@ class Sample:
 
     def __repr__(self):
         return f'<Sample "{self.name}" with {len(self.data)} genes>'
+
+    def exclude_genes(self, gene_list: list):
+        for gene in gene_list:
+            assert isinstance(gene, Gene)
+            if gene in self.data.keys():
+                del self.data[gene]
 
 
 def first_line(file_object, skip_rows=0):
@@ -151,7 +159,10 @@ class SampleCollection:
     @property
     @lru_cache(maxsize=1)
     def genes(self):
-        """Return all genes present in the collection of samples."""
+        """
+        Returns:
+            all genes present in the collection of samples.
+        """
         genes = self.samples[0].genes
         return genes
 
@@ -164,9 +175,18 @@ class SampleCollection:
 
     def as_array(self):
         """
-        Returns: :class:`pandas.DataFrame` object with data for all samples.
+        Returns:
+            `pandas.DataFrame`: two-dimensional labeled array with Gene objects as row labels,
+            storing data from all samples
         """
-        return {s.name: pd.DataFrame(s) for s in self.samples}
+        df = pd.DataFrame()
+        for sample in self.samples:
+            if df.empty:
+                df = sample.as_array().to_frame(sample.name)
+            else:
+                kwargs = {sample.name: sample.as_array().values}
+                df = df.assign(**kwargs)
+        return df
 
     def __add__(self, other):
         return SampleCollection(self.name, self.samples + other.samples)
@@ -406,9 +426,16 @@ class SampleCollection:
             kwargs['delimiter'] = ','
         return cls.from_file(name, file_object, **kwargs)
 
+    def exclude_genes(self, gene_list: list):
+        for sample in self.samples:
+            sample.exclude_genes(gene_list)
+
 
 # TODO class variable with set of genes + method(s) for checking data integrity
 class Experiment:
+    """
+    Stores all user's experiment data.
+    """
 
     def __init__(self, case: SampleCollection, control: SampleCollection):
         self.control = control
@@ -417,26 +444,22 @@ class Experiment:
     def get_all(self):
         return self.control + self.case
 
-    # TODO: are there many ways to compute fold-change?
-    def get_fold_change(self, sample_from_case, use_log=False):
-        assert sample_from_case in self.case.samples
-        # TODO: implement inline
-        calc_fold_change(sample_from_case, self.control, use_log=use_log)
-        """
-        def fold_change(case, base, log2=False):
-            fold_changes = case.copy()
-            for (idx, row) in base.iterrows():
-                fold_changes.loc[[idx]] /= (np.mean(row) or 0.01)  # TODO for now arbitrary value 0.01 when 0's are found
-
-            if log2:
-                fold_changes = np.log2(fold_changes)  # TODO Runtime Warning when 0's are encountered
-
-            return fold_changes
+    def calculate_fold_change(self):
         """
 
+        Returns:
+            `pandas.DataFrame` object: two-dimensional labeled array with Gene objects as row labels, storing
+            fold change and log transformed fold change values for every gene - fold change of the expression
+            level of given gene in the sample under study to the normal level (average in a control group)
 
-class Study:
-    def __init__(self, cases: Sequence[SampleCollection], control: SampleCollection):
-        for case in cases:
-            self.experiments = Experiment(case, control)
+        """
+        fc = {}
+        for (idx, row) in self.get_all().as_array().iterrows():
+            control = [row[label] for label in self.control.labels]
+            case = [row[label] for label in self.case.labels]
+            ratio = ratio_of_classes(case, control)
+            fc[idx] = [ratio, log2(ratio)]
+        return pd.DataFrame.from_dict(fc, orient="index", columns=['FC', 'logFC'])
 
+    def exclude_genes(self, gene_list: list):
+        self.get_all().exclude_genes(gene_list)

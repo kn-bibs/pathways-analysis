@@ -2,13 +2,35 @@
 Methods
 *******
 
-===================
-Implemented methods
-===================
-
+====
+GSEA
+====
 
 .. automodule:: methods.gsea
    :members:
+
+
+===============
+Impact Analysis
+===============
+
+.. automodule:: methods.impact_analysis
+   :members:
+
+====
+SPIA
+====
+
+.. automodule:: methods.SPIA
+   :members:
+
+
+======
+LRpath
+======
+
+.. automodule:: methods.LRpath
+    :members:
 
 
 ===================
