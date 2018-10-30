@@ -56,6 +56,17 @@ TP53	na	348.61	172.52	236.45	130.2
 MDM2	na	42.11	55.5	44.81	39.32
 """
 
+# it seems that the GCT files from the Broad Institute's
+# Cancer Cell Line Encyclopedia (CCLE) have an additional
+# tab character at the end of the version and counts lines;
+# this additional tab needs to be handled properly.
+ccle_like_gct = """\
+#1.2	
+1	4	
+NAME	DESCRIPTION	NORM-1	GBM-1	GBM-2	OV-1
+TP53	na	348.61	172.52	236.45	130.2
+"""
+
 
 def test_from_gct():
 
@@ -78,3 +89,8 @@ def test_from_gct():
     with temp_text_file(old_content) as old_gct_file:
         with warns(UserWarning, match='Unsupported version of GCT file'):
             SampleCollection.from_gct_file('Outdated file', old_gct_file)
+
+    with temp_text_file(ccle_like_gct) as gct_file:
+        with warns(None) as warnings:
+            collection = SampleCollection.from_gct_file('all_samples.gct', gct_file)
+        assert not warnings.list
