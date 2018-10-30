@@ -194,8 +194,8 @@ class SampleCollection:
     @classmethod
     def from_file(
             cls, name, file_object,
-            columns_selector: Callable[[Sequence[int]], Sequence[int]] = None,
-            samples=None, delimiter: str = '\t', index_col: int = 0,
+            columns_selector: Callable[[Sequence[int]], Sequence[int]]=None,
+            samples=None, delimiter: str='\t', index_col: int=0,
             use_header=True, reverse_selection=False, prefix=None,
             header_line=0, description_column=None
     ):
